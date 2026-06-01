@@ -16,7 +16,7 @@ Read the spec before making product/UX decisions; it records resolved choices (e
 
 ## Stack
 
-Svelte 5 (runes) + Vite + TypeScript, wrapped by Capacitor 6 for Android/iOS. Persistence is the **Firebase Web SDK** (Auth + Firestore client SDK) directly — **there is no API server, and we are not adding one.** The "backend" is Firestore Security Rules (`firestore.rules`) + Firebase Auth (anonymous, upgradeable to Google later).
+Svelte 5 (runes) + Vite + TypeScript, wrapped by Capacitor 8 for Android/iOS. Persistence is the **Firebase Web SDK** (Auth + Firestore client SDK) directly — **there is no API server, and we are not adding one.** The "backend" is Firestore Security Rules (`firestore.rules`) + Firebase Auth (anonymous, upgradeable to Google later).
 
 ## Commands
 

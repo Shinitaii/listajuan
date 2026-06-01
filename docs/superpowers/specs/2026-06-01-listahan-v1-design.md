@@ -20,7 +20,7 @@ styling, emoji icons, or dummy data).
 ## Stack
 
 - **Svelte 5** (runes) + **Vite** — web app.
-- **Capacitor 6** — wraps the built web bundle into Android/iOS.
+- **Capacitor 8** — wraps the built web bundle into Android/iOS.
 - **Firebase Web SDK** — Auth + Firestore client SDK. **No API server.**
 
 ### Why no API
@@ -42,7 +42,7 @@ Svelte 5 (runes) components
    stores wrapping                    persistentLocalCache (IndexedDB)
    Firestore listeners                offline-first; syncs when online
         ▼
-  Capacitor 6 native shell
+  Capacitor 8 native shell
 ```
 
 **Data-layer isolation is the central architectural rule.** All Firebase access

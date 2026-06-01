@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Stand up the Svelte 5 + Capacitor 6 + Firebase project skeleton with an offline-first, fully-tested data layer (auth, domain calculations, items, trips, the save fan-out, and the price-history query) — no UI screens yet.
+**Goal:** Stand up the Svelte 5 + Capacitor 8 + Firebase project skeleton with an offline-first, fully-tested data layer (auth, domain calculations, items, trips, the save fan-out, and the price-history query) — no UI screens yet.
 
 **Architecture:** A Vite/Svelte 5 web app wrapped by Capacitor. All Firebase access is isolated behind `src/lib/data/`; components (built in later plans) will consume that layer and never import `firebase/firestore` directly. Pure calculations live in `src/lib/domain/` and are unit-tested with no Firebase. The data layer is tested against the Firestore emulator.
 
-**Tech Stack:** Svelte 5 (runes), Vite, TypeScript, Firebase Web SDK v11 (Auth + Firestore with `persistentLocalCache`), Capacitor 6, Vitest, Firebase Emulator Suite.
+**Tech Stack:** Svelte 5 (runes), Vite, TypeScript, Firebase Web SDK v11 (Auth + Firestore with `persistentLocalCache`), Capacitor 8, Vitest, Firebase Emulator Suite.
 
 ---
 
@@ -1033,7 +1033,7 @@ git commit -m "feat: add collectionGroup price-history query with emulator test"
 
 ---
 
-## Task 14: Add Capacitor 6 shell
+## Task 14: Add Capacitor 8 shell
 
 **Files:**
 - Create: `capacitor.config.ts`
@@ -1067,7 +1067,7 @@ Expected: `dist/` is produced.
 
 ```bash
 git add capacitor.config.ts package.json package-lock.json
-git commit -m "chore: add Capacitor 6 shell configured for the Vite dist build"
+git commit -m "chore: add Capacitor 8 shell configured for the Vite dist build"
 ```
 
 ---

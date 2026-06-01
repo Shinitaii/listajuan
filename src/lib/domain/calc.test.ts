@@ -38,3 +38,14 @@ describe('monthDelta', () => {
     expect(monthDelta(7000, 7780)).toBe(-780);
   });
 });
+
+import { monthRange } from './calc';
+
+describe('monthRange', () => {
+  it('returns ISO start (inclusive) and end (exclusive) for a month', () => {
+    expect(monthRange(2026, 6)).toEqual({ startISO: '2026-06-01', endISO: '2026-07-01' });
+  });
+  it('rolls over the year in December', () => {
+    expect(monthRange(2026, 12)).toEqual({ startISO: '2026-12-01', endISO: '2027-01-01' });
+  });
+});

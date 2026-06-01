@@ -1,6 +1,6 @@
 import {
   doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch, increment,
-  query, collectionGroup, where, orderBy, limit, type Firestore,
+  query, collectionGroup, where, orderBy, limit, onSnapshot, type Firestore,
 } from 'firebase/firestore';
 import { tripsCol, tripDoc, tripItemsCol, itemDoc } from './paths';
 import { pricePerUnit, tripTotal, monthRange } from '../domain/calc';
@@ -184,4 +184,23 @@ export async function monthlyTotal(db: Firestore, uid: string, year: number, mon
   );
   const snap = await getDocs(q);
   return snap.docs.reduce((sum, d) => sum + ((d.data() as Trip).total ?? 0), 0);
+}
+
+export function subscribeRecentTrips(
+  db: Firestore, uid: string, cb: (trips: Trip[]) => void, max = 20,
+): () => void {
+  const q = query(tripsCol(db, uid), where('status', '==', 'saved'), orderBy('date', 'desc'), limit(max));
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => d.data() as Trip)));
+}
+
+export function subscribeDraftTrips(db: Firestore, uid: string, cb: (trips: Trip[]) => void): () => void {
+  const q = query(tripsCol(db, uid), where('status', '==', 'draft'), orderBy('date', 'desc'));
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => d.data() as Trip)));
+}
+
+export function subscribeTripItems(
+  db: Firestore, uid: string, tripId: string, cb: (items: TripItem[]) => void,
+): () => void {
+  const q = query(tripItemsCol(db, uid, tripId), orderBy('addedAt', 'asc'));
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => d.data() as TripItem)));
 }

@@ -1,4 +1,4 @@
-import { doc, getDoc, getDocs, setDoc, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, onSnapshot, type Firestore } from 'firebase/firestore';
 import { itemsCol, itemDoc } from './paths';
 import type { Item, Category, Unit } from '../domain/types';
 
@@ -46,4 +46,8 @@ export async function searchItems(db: Firestore, uid: string, query: string): Pr
   return items.filter(
     (it) => it.nameLower.startsWith(q) || it.aliases.some((a) => a.toLowerCase().startsWith(q)),
   );
+}
+
+export function subscribeItems(db: Firestore, uid: string, cb: (items: Item[]) => void): () => void {
+  return onSnapshot(itemsCol(db, uid), (snap) => cb(snap.docs.map((d) => d.data() as Item)));
 }

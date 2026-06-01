@@ -3,8 +3,11 @@
     $props<{ title: string; message: string; confirmLabel: string; onConfirm: () => void; onCancel: () => void }>();
 </script>
 
-<div class="scrim" onclick={onCancel} role="presentation">
-  <div class="dialog" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()}>
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape') onCancel(); }} />
+<!-- Backdrop click dismisses (mouse affordance); keyboard users dismiss with Escape, handled above. -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<div class="scrim" onclick={(e) => { if (e.target === e.currentTarget) onCancel(); }} role="presentation">
+  <div class="dialog" role="dialog" aria-modal="true" tabindex="-1">
     <h2>{title}</h2>
     <p>{message}</p>
     <button class="confirm" onclick={onConfirm}>{confirmLabel}</button>

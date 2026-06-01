@@ -59,13 +59,15 @@ export async function addTripItem(
     pricePerUnit: pricePerUnit(input.pricePaid, input.quantity),
     tripDate,
     uid,
+    addedAt: Date.now(),
   };
   await setDoc(ref, tripItem);
   return tripItem;
 }
 
 export async function getTripItems(db: Firestore, uid: string, tripId: string): Promise<TripItem[]> {
-  const snap = await getDocs(tripItemsCol(db, uid, tripId));
+  // Ordered by insertion: getDocs alone returns doc-id order, not entry order.
+  const snap = await getDocs(query(tripItemsCol(db, uid, tripId), orderBy('addedAt', 'asc')));
   return snap.docs.map((d) => d.data() as TripItem);
 }
 
@@ -82,10 +84,19 @@ export async function saveTrip(db: Firestore, uid: string, tripId: string): Prom
   const batch = writeBatch(db);
   batch.set(tripRef, { ...trip, status: 'saved', total, itemCount });
 
-  // Fan-out: each tripItem updates its parent item's denormalized last-price fields.
-  // Last write wins per item, so apply in array order (latest line for an item sticks).
+  // Fan-out: update each distinct item's denormalized last-price fields.
+  // We aggregate per itemId FIRST because a WriteBatch applies only one write
+  // per document — issuing batch.set() twice for the same item would drop all
+  // but the last (so increment(1) would fire once, not twice). purchaseCount is
+  // "how many trips bought this item" (cf. the "N biyahe" count in the UI), so
+  // it increments by 1 per distinct item per trip. The latest priced line wins
+  // for lastPrice/lastVendor/lastPriceUnit (array order = insertion order).
+  const latestByItem = new Map<string, TripItem>();
   for (const ti of tripItems) {
     if (ti.pricePaid == null) continue;
+    latestByItem.set(ti.itemId, ti);
+  }
+  for (const ti of latestByItem.values()) {
     batch.set(
       itemDoc(db, uid, ti.itemId),
       {

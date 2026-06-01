@@ -43,4 +43,5 @@ export interface TripItem {
   pricePerUnit: number | null;
   tripDate: string;   // ISO date, copied from the trip for collectionGroup queries
   uid: string;        // owner uid, denormalized so collectionGroup queries can be scoped + secured
+  addedAt: number;    // client ms timestamp; defines insertion order within a trip
 }

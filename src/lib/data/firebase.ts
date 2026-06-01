@@ -2,7 +2,6 @@ import { initializeApp, type FirebaseApp } from 'firebase/app';
 import {
   initializeFirestore,
   persistentLocalCache,
-  persistentSingleTabManager,
   connectFirestoreEmulator,
   type Firestore,
 } from 'firebase/firestore';
@@ -22,7 +21,9 @@ export const app: FirebaseApp = initializeApp(config);
 // Offline-first: writes hit IndexedDB first and sync when online.
 // This is the single most important configuration in the app.
 export const db: Firestore = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager(undefined) }),
+  // persistentLocalCache defaults to a single-tab manager — exactly what a
+  // wrapped mobile (Capacitor) app needs.
+  localCache: persistentLocalCache(),
 });
 
 export const auth: Auth = getAuth(app);

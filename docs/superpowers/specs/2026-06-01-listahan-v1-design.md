@@ -166,6 +166,23 @@ deliberately diverges from the README's efficiency-tuned recommendations.
 - **Language:** Filipino-first, consistent (per README copy list). Body ≥16px,
   prices/quantities ≥20px, hero numbers 40–48px. Tap targets ≥44×44pt.
 
+## Iconography & assets
+
+- **No emoji anywhere in the shipped app.** The wireframe emoji (🛒 🐔 🍅 …) are
+  placeholders only; emoji render inconsistently across devices, read as
+  unfinished/AI-generated, and feel out of place. Replace with a single coherent
+  **vector icon set** (one library, consistent stroke weight) used everywhere:
+  tab bar, list rows, buttons.
+- **Category icons** (karne, gulay, condiments, bigas, iba pa) come from that
+  same set — used on recognition tiles and analytics rows.
+- **Recognition tiles depend on real, recognizable item visuals.** Tiles only
+  beat typing if she identifies an item at a glance. Per-item imagery (a small
+  curated set of icons/illustrations mapped by category, or a chosen icon per
+  item) is a load-bearing asset decision for the Library screen — resolve the
+  icon source before building Library C.
+- Icon library choice is TBD at scaffold time; constraint: offline-bundled
+  (no runtime CDN fetch), tree-shakeable, works inside the Capacitor web bundle.
+
 ## Testing
 
 - **Data layer** unit-tested against the **Firestore emulator** — especially the

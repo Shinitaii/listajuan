@@ -74,6 +74,17 @@ describe('saveTrip fan-out', () => {
     expect(updated?.lastPrice).toBe(300);
     expect(updated?.lastVendor).toBe('Puregold');
   });
+
+  it('refuses to re-save an already-saved trip (no double fan-out)', async () => {
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', defaultUnit: 'kg' });
+    const trip = await createDraftTrip(ctx.db, ctx.uid, { name: 'Palengke', storeName: 'Cartimar', date: '2026-05-31' });
+    await addTripItem(ctx.db, ctx.uid, trip.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, vendor: 'Cartimar' });
+    await saveTrip(ctx.db, ctx.uid, trip.id);
+
+    await expect(saveTrip(ctx.db, ctx.uid, trip.id)).rejects.toThrow();
+    const updated = await getItem(ctx.db, ctx.uid, item.id);
+    expect(updated?.purchaseCount).toBe(1); // not double-counted
+  });
 });
 
 import { priceHistory } from './trips';

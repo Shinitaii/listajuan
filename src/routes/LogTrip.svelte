@@ -13,9 +13,19 @@
   let { params } = $props<{ params: { tripId: string } }>();
   const uid = session.uid!;
 
+  // True once we've committed and are navigating away. Stops the resume effect
+  // from re-firing after commitDraft nulls the draft (which would otherwise
+  // re-open the just-saved trip and attempt a second commit).
+  let leaving = $state(false);
+
   // Ensure the draft store points at this trip (e.g. on resume/deeplink).
   $effect(() => {
-    if (draft.trip?.id !== params.tripId) resumeTrip(uid, params.tripId);
+    if (leaving) return;
+    if (draft.trip?.id !== params.tripId) {
+      resumeTrip(uid, params.tripId).then((ok) => {
+        if (!ok && !leaving) push('/'); // missing or already-saved trip → bail home
+      });
+    }
   });
 
   let step = $state<1 | 2 | 3>(1);
@@ -47,6 +57,7 @@
   }
 
   async function finish() {
+    leaving = true;
     const id = await commitDraft(uid);
     push(`/trip/${id}`);
   }

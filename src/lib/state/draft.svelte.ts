@@ -29,10 +29,20 @@ export async function startNewTrip(uid: string, input: NewTripInput): Promise<st
   return _trip.id;
 }
 
-export async function resumeTrip(uid: string, tripId: string): Promise<void> {
-  _trip = await getTrip(db, uid, tripId);
-  if (!_trip) throw new Error('Draft not found');
+/**
+ * Loads a DRAFT trip into the editor. Returns false (without throwing) when the
+ * trip is missing or already saved — callers redirect instead of crashing.
+ * Drafts-only matters: it stops a saved trip being re-opened and re-committed.
+ */
+export async function resumeTrip(uid: string, tripId: string): Promise<boolean> {
+  const t = await getTrip(db, uid, tripId);
+  if (!t || t.status !== 'draft') {
+    unsub?.(); unsub = null; _trip = null; _items = [];
+    return false;
+  }
+  _trip = t;
   watch(uid, tripId);
+  return true;
 }
 
 export async function addToDraft(uid: string, input: NewTripItemInput): Promise<void> {

@@ -76,6 +76,9 @@ export async function saveTrip(db: Firestore, uid: string, tripId: string): Prom
   const tripSnap = await getDoc(tripRef);
   if (!tripSnap.exists()) throw new Error(`Trip ${tripId} not found`);
   const trip = tripSnap.data() as Trip;
+  // Integrity guard: saving runs the item fan-out (purchaseCount increment).
+  // Refuse to re-save an already-saved trip so the fan-out can't double-count.
+  if (trip.status !== 'draft') throw new Error(`Trip ${tripId} is not a draft`);
 
   const tripItems = await getTripItems(db, uid, tripId);
   const total = tripTotal(tripItems);

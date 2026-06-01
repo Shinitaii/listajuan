@@ -8,9 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
-    "test": "vitest run --passWithNoTests",
-    "test:emulator": "firebase emulators:exec --only auth,firestore \"vitest run --include src/lib/data/**/*.emulator.test.ts\"",
-    "test:all": "vitest run --include src/**/*.{test,emulator.test}.ts"
+    "test": "vitest run --exclude \"**/*.emulator.test.ts\" --passWithNoTests",
+    "test:emulator": "firebase emulators:exec --only auth,firestore \"vitest run src/lib/data\"",
+    "test:all": "vitest run --passWithNoTests"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.1.2",

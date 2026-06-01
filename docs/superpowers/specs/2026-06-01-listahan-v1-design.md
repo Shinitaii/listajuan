@@ -129,15 +129,27 @@ layer.
 
 ## Screen directions (resolved A/B/C)
 
-- **Home — A:** month-at-a-glance (big spend number, delta chip, recent trips,
-  persistent "＋ Bagong biyahe"); borrow B's "resume unfinished trip" row.
-- **Log a Trip — B:** bottom sheet (search autocomplete, qty stepper, price,
-  collapsed vendor/notes, I-save). Running total always visible. PRIMARY flow.
-- **Item Library — A** (dropdown autocomplete under field) as the engine inside
-  the log flow; layer **C** recognition tiles as the empty-state.
+**Design bias: accessibility-first.** The target user has a difficult time using
+apps. We optimize for **recognition over recall** and **one decision per screen**,
+accepting more taps per item as the cost of making every action unmissable. This
+deliberately diverges from the README's efficiency-tuned recommendations.
+
+- **Home — A layout, B's dominance:** month-at-a-glance (big spend number, delta
+  chip, recent trips) plus B's "resume unfinished trip" row — but the
+  "＋ Magsimula ng biyahe" start-trip control is a genuinely dominant card/button,
+  not a thin bar, so starting a trip is the single most obvious target.
+- **Log a Trip — C (one-thing-at-a-time):** full-screen steps (1 Item · 2 Dami ·
+  3 Presyo) with huge targets and a big +/− stepper. This is the DEFAULT primary
+  flow — most forgiving when tired. Running total always visible. (Log B's bottom
+  sheet is NOT used in v1; revisit only if she outgrows the stepper.)
+- **Item Library — C primary, A fallback:** recognition tiles (picture + name +
+  last price, tap to add at last price, zero typing) are the PRIMARY way to add a
+  regular item. Type-to-search autocomplete (A) is the fallback for new/rare
+  items only — never the first thing she must do.
 - **Price History — B:** giant last-price number + sparkline + receipts list.
 - **Trip Summary — A:** receipt-style total card + itemized rows, inline edit.
-- **Monthly Spend — A:** this-vs-last delta, two-bar compare, category bars.
+- **Monthly Spend — A:** this-vs-last delta, two-bar compare, category bars
+  (no pie charts, no percentages — low-numeracy friendly).
 
 ## Interaction & error-handling philosophy
 

@@ -4,6 +4,7 @@
       "collectionGroup": "tripItems",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
         { "fieldPath": "itemId", "order": "ASCENDING" },
         { "fieldPath": "tripDate", "order": "DESCENDING" }
       ]

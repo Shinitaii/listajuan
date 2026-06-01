@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run --exclude \"**/*.emulator.test.ts\" --passWithNoTests",
-    "test:emulator": "firebase emulators:exec --only auth,firestore \"vitest run src/lib/data\"",
+    "test:emulator": "firebase emulators:exec --only auth,firestore \"vitest run src/lib/data --no-file-parallelism\"",
     "test:all": "vitest run --passWithNoTests"
   },
   "devDependencies": {

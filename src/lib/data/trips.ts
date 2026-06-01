@@ -58,6 +58,7 @@ export async function addTripItem(
     pricePaid: input.pricePaid,
     pricePerUnit: pricePerUnit(input.pricePaid, input.quantity),
     tripDate,
+    uid,
   };
   await setDoc(ref, tripItem);
   return tripItem;
@@ -100,4 +101,25 @@ export async function saveTrip(db: Firestore, uid: string, tripId: string): Prom
 
   await batch.commit();
   return { ...trip, status: 'saved', total, itemCount };
+}
+
+/**
+ * Price-over-time for a single item across all trips.
+ * Uses a collectionGroup query on tripItems. The query MUST be scoped by uid:
+ * Firestore rejects a collectionGroup query whose security rule checks
+ * resource.data.uid unless the query itself constrains uid, so the
+ * `where('uid','==',uid)` clause is load-bearing, not just a filter.
+ * Relies on the composite index in firestore.indexes.json
+ * (uid ASC, itemId ASC, tripDate DESC) and the collectionGroup rule in
+ * firestore.rules.
+ */
+export async function priceHistory(db: Firestore, uid: string, itemId: string): Promise<TripItem[]> {
+  const q = query(
+    collectionGroup(db, 'tripItems'),
+    where('uid', '==', uid),
+    where('itemId', '==', itemId),
+    orderBy('tripDate', 'desc'),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data() as TripItem);
 }

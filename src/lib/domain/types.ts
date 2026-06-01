@@ -42,4 +42,5 @@ export interface TripItem {
   pricePaid: number | null;
   pricePerUnit: number | null;
   tripDate: string;   // ISO date, copied from the trip for collectionGroup queries
+  uid: string;        // owner uid, denormalized so collectionGroup queries can be scoped + secured
 }

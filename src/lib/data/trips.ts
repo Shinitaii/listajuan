@@ -1,9 +1,9 @@
 import {
-  doc, getDoc, getDocs, setDoc, writeBatch, increment,
-  query, collectionGroup, where, orderBy, type Firestore,
+  doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch, increment,
+  query, collectionGroup, where, orderBy, limit, type Firestore,
 } from 'firebase/firestore';
 import { tripsCol, tripDoc, tripItemsCol, itemDoc } from './paths';
-import { pricePerUnit, tripTotal } from '../domain/calc';
+import { pricePerUnit, tripTotal, monthRange } from '../domain/calc';
 import type { Trip, TripItem, Unit } from '../domain/types';
 
 export interface NewTripInput {
@@ -133,4 +133,55 @@ export async function priceHistory(db: Firestore, uid: string, itemId: string): 
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data() as TripItem);
+}
+
+export async function getTrip(db: Firestore, uid: string, tripId: string): Promise<Trip | null> {
+  const snap = await getDoc(tripDoc(db, uid, tripId));
+  return snap.exists() ? (snap.data() as Trip) : null;
+}
+
+export interface TripItemPatch {
+  quantity?: number | null;
+  pricePaid?: number | null;
+  unit?: Unit;
+  vendor?: string | null;
+  label?: string;
+}
+
+export async function updateTripItem(
+  db: Firestore, uid: string, tripId: string, tripItemId: string, patch: TripItemPatch,
+): Promise<void> {
+  const ref = doc(tripItemsCol(db, uid, tripId), tripItemId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error(`TripItem ${tripItemId} not found`);
+  const current = snap.data() as TripItem;
+  const next: TripItem = { ...current, ...patch };
+  next.pricePerUnit = pricePerUnit(next.pricePaid, next.quantity);
+  await setDoc(ref, next);
+}
+
+export async function removeTripItem(
+  db: Firestore, uid: string, tripId: string, tripItemId: string,
+): Promise<void> {
+  await deleteDoc(doc(tripItemsCol(db, uid, tripId), tripItemId));
+}
+
+export async function deleteTrip(db: Firestore, uid: string, tripId: string): Promise<void> {
+  const items = await getTripItems(db, uid, tripId);
+  const batch = writeBatch(db);
+  for (const ti of items) batch.delete(doc(tripItemsCol(db, uid, tripId), ti.id));
+  batch.delete(tripDoc(db, uid, tripId));
+  await batch.commit();
+}
+
+export async function monthlyTotal(db: Firestore, uid: string, year: number, month: number): Promise<number> {
+  const { startISO, endISO } = monthRange(year, month);
+  const q = query(
+    tripsCol(db, uid),
+    where('status', '==', 'saved'),
+    where('date', '>=', startISO),
+    where('date', '<', endISO),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.reduce((sum, d) => sum + ((d.data() as Trip).total ?? 0), 0);
 }

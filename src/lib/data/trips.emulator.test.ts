@@ -92,3 +92,63 @@ describe('priceHistory', () => {
     expect(history[0].tripDate).toBe('2026-05-31');
   });
 });
+
+import { getTrip, updateTripItem, removeTripItem, deleteTrip, monthlyTotal } from './trips';
+
+describe('getTrip', () => {
+  it('returns the trip or null', async () => {
+    const t = await createDraftTrip(ctx.db, ctx.uid, { name: 'P', storeName: 'C', date: '2026-06-01' });
+    expect((await getTrip(ctx.db, ctx.uid, t.id))?.id).toBe(t.id);
+    expect(await getTrip(ctx.db, ctx.uid, 'nope')).toBeNull();
+  });
+});
+
+describe('updateTripItem', () => {
+  it('updates fields and recomputes pricePerUnit', async () => {
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', defaultUnit: 'kg' });
+    const t = await createDraftTrip(ctx.db, ctx.uid, { name: 'P', storeName: 'C', date: '2026-06-01' });
+    const ti = await addTripItem(ctx.db, ctx.uid, t.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, vendor: null });
+    await updateTripItem(ctx.db, ctx.uid, t.id, ti.id, { quantity: 2, pricePaid: 700 });
+    const items = await getTripItems(ctx.db, ctx.uid, t.id);
+    expect(items[0].quantity).toBe(2);
+    expect(items[0].pricePaid).toBe(700);
+    expect(items[0].pricePerUnit).toBe(350);
+  });
+});
+
+describe('removeTripItem', () => {
+  it('deletes a single line', async () => {
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', defaultUnit: 'kg' });
+    const t = await createDraftTrip(ctx.db, ctx.uid, { name: 'P', storeName: 'C', date: '2026-06-01' });
+    const ti = await addTripItem(ctx.db, ctx.uid, t.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, vendor: null });
+    await removeTripItem(ctx.db, ctx.uid, t.id, ti.id);
+    expect(await getTripItems(ctx.db, ctx.uid, t.id)).toHaveLength(0);
+  });
+});
+
+describe('deleteTrip', () => {
+  it('deletes the trip and its tripItems', async () => {
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', defaultUnit: 'kg' });
+    const t = await createDraftTrip(ctx.db, ctx.uid, { name: 'P', storeName: 'C', date: '2026-06-01' });
+    await addTripItem(ctx.db, ctx.uid, t.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, vendor: null });
+    await deleteTrip(ctx.db, ctx.uid, t.id);
+    expect(await getTrip(ctx.db, ctx.uid, t.id)).toBeNull();
+    expect(await getTripItems(ctx.db, ctx.uid, t.id)).toHaveLength(0);
+  });
+});
+
+describe('monthlyTotal', () => {
+  it('sums saved-trip totals within the month, excluding drafts and other months', async () => {
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', defaultUnit: 'kg' });
+    const a = await createDraftTrip(ctx.db, ctx.uid, { name: 'A', storeName: 'C', date: '2026-06-03' });
+    await addTripItem(ctx.db, ctx.uid, a.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, vendor: null });
+    await saveTrip(ctx.db, ctx.uid, a.id);
+    const d = await createDraftTrip(ctx.db, ctx.uid, { name: 'D', storeName: 'C', date: '2026-06-10' });
+    await addTripItem(ctx.db, ctx.uid, d.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 999, vendor: null });
+    const b = await createDraftTrip(ctx.db, ctx.uid, { name: 'B', storeName: 'C', date: '2026-05-30' });
+    await addTripItem(ctx.db, ctx.uid, b.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 500, vendor: null });
+    await saveTrip(ctx.db, ctx.uid, b.id);
+
+    expect(await monthlyTotal(ctx.db, ctx.uid, 2026, 6)).toBe(320);
+  });
+});

@@ -67,3 +67,37 @@ export async function getTripItems(db: Firestore, uid: string, tripId: string): 
   const snap = await getDocs(tripItemsCol(db, uid, tripId));
   return snap.docs.map((d) => d.data() as TripItem);
 }
+
+export async function saveTrip(db: Firestore, uid: string, tripId: string): Promise<Trip> {
+  const tripRef = tripDoc(db, uid, tripId);
+  const tripSnap = await getDoc(tripRef);
+  if (!tripSnap.exists()) throw new Error(`Trip ${tripId} not found`);
+  const trip = tripSnap.data() as Trip;
+
+  const tripItems = await getTripItems(db, uid, tripId);
+  const total = tripTotal(tripItems);
+  const itemCount = tripItems.length;
+
+  const batch = writeBatch(db);
+  batch.set(tripRef, { ...trip, status: 'saved', total, itemCount });
+
+  // Fan-out: each tripItem updates its parent item's denormalized last-price fields.
+  // Last write wins per item, so apply in array order (latest line for an item sticks).
+  for (const ti of tripItems) {
+    if (ti.pricePaid == null) continue;
+    batch.set(
+      itemDoc(db, uid, ti.itemId),
+      {
+        lastPrice: ti.pricePaid,
+        lastPriceUnit: ti.unit,
+        lastPriceDate: ti.tripDate,
+        lastVendor: ti.vendor,
+        purchaseCount: increment(1),
+      },
+      { merge: true },
+    );
+  }
+
+  await batch.commit();
+  return { ...trip, status: 'saved', total, itemCount };
+}

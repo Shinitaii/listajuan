@@ -30,3 +30,34 @@ describe('addTripItem', () => {
     expect(items).toHaveLength(1);
   });
 });
+
+import { saveTrip } from './trips';
+import { getItem } from './items';
+
+describe('saveTrip fan-out', () => {
+  it('marks the trip saved with correct total and itemCount', async () => {
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', defaultUnit: 'kg' });
+    const trip = await createDraftTrip(ctx.db, ctx.uid, { name: 'Palengke', storeName: 'Cartimar', date: '2026-05-31' });
+    await addTripItem(ctx.db, ctx.uid, trip.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, vendor: 'Cartimar' });
+    await addTripItem(ctx.db, ctx.uid, trip.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 300, vendor: 'Cartimar' });
+
+    const saved = await saveTrip(ctx.db, ctx.uid, trip.id);
+    expect(saved.status).toBe('saved');
+    expect(saved.total).toBe(620);
+    expect(saved.itemCount).toBe(2);
+  });
+
+  it('updates the parent item lastPrice/lastVendor/lastPriceDate and bumps purchaseCount', async () => {
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', defaultUnit: 'kg' });
+    const trip = await createDraftTrip(ctx.db, ctx.uid, { name: 'Palengke', storeName: 'Cartimar', date: '2026-05-31' });
+    await addTripItem(ctx.db, ctx.uid, trip.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, vendor: 'Cartimar' });
+
+    await saveTrip(ctx.db, ctx.uid, trip.id);
+
+    const updated = await getItem(ctx.db, ctx.uid, item.id);
+    expect(updated?.lastPrice).toBe(320);
+    expect(updated?.lastVendor).toBe('Cartimar');
+    expect(updated?.lastPriceDate).toBe('2026-05-31');
+    expect(updated?.purchaseCount).toBe(1);
+  });
+});

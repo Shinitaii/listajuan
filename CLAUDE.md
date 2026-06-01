@@ -59,7 +59,9 @@ Everything is scoped under `/users/{uid}/…` so Security Rules are trivial and 
 
 **The one non-trivial operation is the save fan-out** (`saveTrip` in `src/lib/data/trips.ts`): on save, a single batched write marks the trip saved with its computed total/itemCount, and for each tripItem upserts its parent item's denormalized `lastPrice`/`lastPriceUnit`/`lastPriceDate`/`lastVendor` and increments `purchaseCount`. The denormalized `lastPrice` is what makes autocomplete show last price in one read per result.
 
-**Price history** uses a **collectionGroup query on `tripItems` where `itemId == X` ordered by `tripDate`** (`priceHistory` in `trips.ts`). `tripDate` is copied onto every tripItem precisely so this query needs no joins. It depends on the composite index in `firestore.indexes.json`; the emulator auto-creates it, but it must be deployed for production.
+**Price history** uses a **collectionGroup query on `tripItems` where `uid == me AND itemId == X` ordered by `tripDate`** (`priceHistory` in `trips.ts`). The `uid` clause is mandatory — Firestore rejects a collectionGroup query whose rule checks `resource.data.uid` unless the query constrains `uid` — so each tripItem denormalizes `uid` (and `tripDate`) for this purpose. It depends on the composite index `(uid, itemId, tripDate desc)` in `firestore.indexes.json` AND a dedicated collectionGroup read rule in `firestore.rules` (the nested `/users/{uid}/{document=**}` rule does NOT cover collectionGroup queries). The emulator auto-creates indexes, but the index + rules must be deployed for production.
+
+**Emulator tests run serially** (`--no-file-parallelism`): they share one emulator and each clears the whole DB in `beforeEach`, so parallel test files would wipe each other.
 
 ## Testing conventions
 

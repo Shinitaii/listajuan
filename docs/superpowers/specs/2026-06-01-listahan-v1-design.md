@@ -99,7 +99,9 @@ Source of truth for price history.
 
 ```
 { id, itemId, label, vendor?, quantity, unit,
-  pricePaid, pricePerUnit, tripDate }   // tripDate copied for collectionGroup queries
+  pricePaid, pricePerUnit, tripDate, uid }
+// tripDate + uid are denormalized onto each tripItem so the collectionGroup
+// price-history query can be both scoped and secured by owner (see below).
 ```
 
 ## Core logic — the save fan-out
@@ -118,9 +120,14 @@ layer.
 - **Autocomplete (Screen 3):** prefix query on `items.nameLower` + alias match;
   each result already carries `lastPrice` (no per-row query).
 - **Price history (Screen 4):** **collectionGroup query on `tripItems` where
-  `itemId == X`**, ordered by `tripDate`. Requires one composite index
-  (`firestore.indexes.json`). `tripDate` is copied onto each tripItem so the
-  query needs no joins.
+  `uid == me AND itemId == X`**, ordered by `tripDate`. The `uid` clause is
+  load-bearing, not just a filter: Firestore rejects a collectionGroup query
+  whose security rule checks `resource.data.uid` unless the query itself
+  constrains `uid`. Requires a composite index `(uid, itemId, tripDate desc)`
+  and a dedicated collectionGroup read rule in `firestore.rules` (the nested
+  `/users/{uid}/{document=**}` rule does NOT authorize collectionGroup queries).
+  `tripDate` and `uid` are denormalized onto each tripItem so the query needs no
+  joins.
 - **Monthly analytics (Screen 6):** query saved trips where `date` in
   [month start, end], sum `total`; group by category via tripItems. Client-side,
   no precomputation in v1.

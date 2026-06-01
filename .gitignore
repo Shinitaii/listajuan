@@ -29,3 +29,5 @@ dist-ssr
 android/
 ios/
 .firebase/
+
+.claude/settings.local.json

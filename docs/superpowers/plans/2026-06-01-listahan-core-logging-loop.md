@@ -1202,4 +1202,13 @@ Acceptance (spec Summary A): total card (hero), date + item-count + store chips,
 - `Biyahe` and `Items` tab screens are still stubs after Plan 2 — full versions (all-trips list, full item library management) are Plan 3 or a Plan 2.5.
 - New-item creation in LogTrip defaults category to `iba_pa`; a later task should let her set/correct category (affects analytics accuracy).
 - Consider extracting the inline-edit `document.getElementById` pattern in TripSummary into bound state if it proves fragile.
+
+## Known gaps after Plan 2 execution (carry-forward)
+
+- **Swipe-to-remove a line item** (spec: "Item-level removal = swipe/undo") is NOT implemented; `removeTripItem` exists in the data layer + draft store but no UI surfaces it yet. Add to TripSummary/LogTrip.
+- **Rapid trip-switching race:** `resumeTrip` is fire-and-forget from LogTrip's `$effect`; switching between two drafts very quickly could briefly desync `draft.trip` vs the items subscription. Low impact for single-user v1; revisit if it bites.
+- **`monthlyTotal` on Home is a one-shot `getDocs`**, not a subscription, so the hero number doesn't live-update after a save until Home remounts. Fine by design for v1; convert to a subscription if it feels stale.
+- **`$props<T>()` generic form** is used across components; it type-checks in this toolchain but the idiomatic Svelte 5 form is `let { ... }: Props = $props()`. Harmless; tidy opportunistically.
+- **Local dev requires `.env`** with `VITE_USE_EMULATOR=true` (gitignored; mirror `.env.example`) plus a running emulator (`npx firebase emulators:start --only auth,firestore`). Production needs the real Firebase web config and the deployed rules + indexes.
+- **Interactive verification still pending:** automated checks cover types, build, and all data-layer behavior (10 unit + 19 emulator tests), and the app boots/serves, but the click-through (stepper, inline edit, delete dialog, no-emoji visual pass) was not executed in a real browser.
 ```

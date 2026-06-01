@@ -1,0 +1,31 @@
+{
+  "name": "listahan",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
+    "test": "vitest run --exclude \"**/*.emulator.test.ts\" --passWithNoTests",
+    "test:emulator": "firebase emulators:exec --only auth,firestore \"vitest run src/lib/data --no-file-parallelism\"",
+    "test:all": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.3.4",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^24.12.3",
+    "firebase-tools": "^15.19.0",
+    "svelte": "^5.55.5",
+    "svelte-check": "^4.4.8",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.12",
+    "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.3.4",
+    "firebase": "^12.14.0"
+  }
+}

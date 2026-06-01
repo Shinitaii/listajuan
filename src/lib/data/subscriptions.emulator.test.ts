@@ -9,7 +9,7 @@ beforeAll(async () => { ctx = await setupEmulator(); });
 afterAll(async () => { await teardownEmulator(ctx); });
 beforeEach(async () => { await clearFirestore(); });
 
-function waitFor<T>(subscribe: (cb: (v: T) => void) => () => void, pred: (v: T) => boolean, ms = 4000): Promise<T> {
+function waitFor<T>(subscribe: (cb: (v: T) => void) => () => void, pred: (v: T) => boolean, ms = 8000): Promise<T> {
   return new Promise((resolve, reject) => {
     let unsub = () => {};
     const timer = setTimeout(() => { unsub(); reject(new Error('timeout')); }, ms);

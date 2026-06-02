@@ -2,6 +2,7 @@
   import { library, searchLibrary } from '../lib/state/library.svelte';
   import { categoryIcon } from '../lib/ui/categoryIcon';
   import { Search } from 'lucide-svelte';
+  import { baseUnitLabel } from '../lib/domain/units';
   import type { Item } from '../lib/domain/types';
 
   let { onPick } = $props<{ onPick: (r: Item | { isNew: true; name: string }) => void }>();
@@ -12,7 +13,6 @@
       ? searchLibrary(q)
       : [...library.items].sort((a, b) => b.purchaseCount - a.purchaseCount).slice(0, 8),
   );
-  const peso = (n: number | null) => (n == null ? '' : '₱' + Math.round(n));
 </script>
 
 <div class="picker">
@@ -27,7 +27,7 @@
       <button class="tile" onclick={() => onPick(it)}>
         <Icon size={26} />
         <div class="t-name">{it.canonicalName}</div>
-        <div class="t-price">{peso(it.lastPrice)}{it.lastPriceUnit ? '/' + it.lastPriceUnit : ''}</div>
+        <div class="t-price">{it.lastPricePerBaseUnit != null && it.lastBaseUnit != null ? '₱' + Math.round(it.lastPricePerBaseUnit) + '/' + baseUnitLabel(it.lastBaseUnit) : ''}</div>
       </button>
     {/each}
   </div>

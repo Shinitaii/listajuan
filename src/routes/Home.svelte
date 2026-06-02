@@ -8,6 +8,14 @@
   import { db } from '../lib/data/firebase';
   import { monthDelta } from '../lib/domain/calc';
   import AppButton from '../lib/ui/AppButton.svelte';
+  import type { Trip } from '../lib/domain/types';
+
+  const marketLabel = (t: Trip) =>
+    t.marketNames.length
+      ? t.marketNames.length <= 2
+        ? t.marketNames.join(' + ')
+        : t.marketNames.length + ' tindahan'
+      : '—';
 
   const now = new Date();
   const y = now.getFullYear(), m = now.getMonth() + 1;
@@ -25,7 +33,7 @@
   async function newTrip() {
     const uid = session.uid!;
     const today = new Date().toISOString().slice(0, 10);
-    const id = await startNewTrip(uid, { name: 'Biyahe', storeName: '', date: today });
+    const id = await startNewTrip(uid, { name: 'Biyahe', date: today });
     push(`/log/${id}`);
   }
 </script>
@@ -51,7 +59,7 @@
   <div class="list">
     {#each trips.recent as t}
       <button class="row" onclick={() => push(`/trip/${t.id}`)}>
-        <div><div class="name">{t.name}</div><div class="sub">{t.itemCount} item{t.itemCount === 1 ? '' : 's'} · {t.storeName}</div></div>
+        <div><div class="name">{t.name}</div><div class="sub">{t.date} · {marketLabel(t)} · {t.itemCount} item{t.itemCount === 1 ? '' : 's'}</div></div>
         <div class="price">{peso(t.total)}</div>
       </button>
     {/each}

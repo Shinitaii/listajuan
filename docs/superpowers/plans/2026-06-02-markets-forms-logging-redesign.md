@@ -855,3 +855,10 @@ Props: `{ defaultMarketId, defaultMarketName, onSave }`. Internally drives: pick
 - **i18n** still pending (hardcoded Tagalog) — see architecture-roadmap.
 - Editing an item's `form` after it has history: existing tripItems keep their recorded `baseUnit`/`pricePerBaseUnit` (historically accurate); only future buys use the new form. Documented, intended.
 - The recurring emulator `subscribeTripItems` flake (passes on isolated re-run) persists; not a regression.
+
+### Final-review findings (fixed/deferred)
+- **FIXED:** the prefilled total now tracks qty/unit until the user edits the price (was computed once at pick-time, drifting from the live readout).
+- **Deferred (latent — trip default market not wired yet):** trip-start never sets `defaultMarketId`, so `AddItem` always starts market-unset. The spec's "optional default market at trip start" is unimplemented; when wired, also pass the resolved `defaultMarketName` to `AddItem` (today it's hardcoded `null`, which would put a line under "Walang tindahan" despite having a market id) and resolve the `state_referenced_locally` warnings on those props.
+- **Deferred (minor):** LogTrip/TripSummary group by market **name**, so two distinct user-created markets with the same name merge. Group by `marketId` (name for display) if duplicate names appear in practice.
+- **Deferred (minor):** clearing the quantity field saves a `null` quantity (no crash; readout just hides). Consider requiring qty before save.
+- **Deferred (minor):** once a default market is set, `lastContextFor` requires both market+variant to match and silently falls back to the newest row of any stream if it can't — could prefill a foreign stream's price. Revisit with the default-market wiring.

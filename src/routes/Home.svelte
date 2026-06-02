@@ -25,7 +25,7 @@
   async function newTrip() {
     const uid = session.uid!;
     const today = new Date().toISOString().slice(0, 10);
-    const id = await startNewTrip(uid, { name: 'Biyahe', storeName: '', date: today });
+    const id = await startNewTrip(uid, { name: 'Biyahe', date: today });
     push(`/log/${id}`);
   }
 </script>

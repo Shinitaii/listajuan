@@ -1,6 +1,6 @@
-# Contributing to Listahan
+# Contributing to ListaJuan
 
-Thanks for working on Listahan. This guide covers how we build here. The short version: **accessibility-first product, TDD, and all Firebase access behind the data layer.**
+Thanks for working on ListaJuan. This guide covers how we build here. The short version: **accessibility-first product, TDD, and all Firebase access behind the data layer.**
 
 ## Before you start
 
@@ -16,8 +16,10 @@ Requires **Node 20+**, **npm**, and a **Java runtime** (the Firestore emulator n
 
 ```bash
 npm install
-cp .env.example .env     # keep VITE_USE_EMULATOR=true for local dev
+npm run dev              # boots the Firebase emulators + Vite together (needs Java)
 ```
+
+`.env.development` (committed, emulator config) drives `npm run dev` — no copying needed. For a build against real Firebase, `cp .env.example .env.production`, fill it in, then `npm run build` (or `npm run dev:prod` to run the dev server against real Firebase).
 
 ## How we work
 

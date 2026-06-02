@@ -1,10 +1,10 @@
 {
-  "name": "listahan",
+  "name": "listajuan",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "firebase emulators:exec --only auth,firestore \"vite\"",
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
@@ -12,7 +12,10 @@
     "test:emulator": "firebase emulators:exec --only auth,firestore \"vitest run src/lib/data --no-file-parallelism\"",
     "test:all": "vitest run --passWithNoTests",
     "e2e": "firebase emulators:exec --only auth,firestore \"playwright test\"",
-    "e2e:headed": "firebase emulators:exec --only auth,firestore \"playwright test --headed\""
+    "e2e:headed": "firebase emulators:exec --only auth,firestore \"playwright test --headed\"",
+    "build:emulator": "vite build --mode development",
+    "dev:prod": "vite --mode production",
+    "dev:web": "vite"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.4",

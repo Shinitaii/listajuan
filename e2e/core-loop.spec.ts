@@ -11,11 +11,12 @@ async function logTripWithLiempo(page: Page) {
   // Anonymous sign-in + Home render
   await expect(page.getByText('Gastos ngayong buwan')).toBeVisible({ timeout: 20000 });
 
-  // Start a trip
+  // Start a trip — wait for the route to actually change before asserting the UI
   await page.getByRole('button', { name: /Bagong biyahe/ }).click();
+  await page.waitForURL(/#\/log\//, { timeout: 10000 });
 
   // Step 1: create a brand-new item by typing then tapping "Bagong item"
-  await expect(page.getByText('Anong idadagdag?')).toBeVisible();
+  await expect(page.getByText('Anong idadagdag?')).toBeVisible({ timeout: 10000 });
   await page.getByPlaceholder('Hanapin o pumili…').fill('Liempo');
   await page.getByRole('button', { name: /Bagong item/ }).click();
 
@@ -31,12 +32,13 @@ async function logTripWithLiempo(page: Page) {
   await page.screenshot({ path: 'e2e/__screens__/log-presyo.png' });
   await page.getByRole('button', { name: /I-save ang item/ }).click();
 
-  // Back at step 1; running total in the header should reflect 320
-  await expect(page.getByText('Anong idadagdag?')).toBeVisible();
-  await expect(page.locator('header .total')).toHaveText('₱320');
+  // After saving we land on the trip overview: the item + running total show,
+  // and an explicit finish button is available.
+  await expect(page.getByText('Liempo')).toBeVisible();
+  await expect(page.locator('.totalband .total')).toHaveText('₱320');
 
-  // Finish → summary
-  await page.getByRole('button', { name: 'Tapos' }).click();
+  // Finish the trip → summary
+  await page.getByRole('button', { name: /Tapos/ }).click();
   await expect(page.getByText('Kabuuang gastos')).toBeVisible();
 }
 

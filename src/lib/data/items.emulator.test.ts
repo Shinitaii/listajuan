@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { setupEmulator, teardownEmulator, clearFirestore, type TestCtx } from './testing/emulator';
-import { createItem, searchItems, updateItemMeta, getItem } from './items';
+import { createItem, searchItems, updateItemMeta, getItem, deleteItem } from './items';
 
 let ctx: TestCtx;
 
@@ -50,5 +50,25 @@ describe('updateItemMeta', () => {
     const updated = await getItem(ctx.db, ctx.uid, item.id);
     expect(updated?.form).toBe('timbang');
     expect(updated?.category).toBe('karne');
+  });
+
+  it('renames the item and re-derives nameLower', async () => {
+    const item = await createItem(ctx.db, ctx.uid, {
+      canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg',
+    });
+    await updateItemMeta(ctx.db, ctx.uid, item.id, { canonicalName: 'Pork Belly' });
+    const updated = await getItem(ctx.db, ctx.uid, item.id);
+    expect(updated?.canonicalName).toBe('Pork Belly');
+    expect(updated?.nameLower).toBe('pork belly');
+  });
+});
+
+describe('deleteItem', () => {
+  it('removes the item', async () => {
+    const item = await createItem(ctx.db, ctx.uid, {
+      canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg',
+    });
+    await deleteItem(ctx.db, ctx.uid, item.id);
+    expect(await getItem(ctx.db, ctx.uid, item.id)).toBeNull();
   });
 });

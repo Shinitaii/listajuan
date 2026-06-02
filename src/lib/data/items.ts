@@ -1,4 +1,4 @@
-import { doc, getDoc, getDocs, setDoc, onSnapshot, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot, type Firestore } from 'firebase/firestore';
 import { itemsCol, itemDoc } from './paths';
 import type { Item, Category, Unit, Form } from '../domain/types';
 
@@ -54,12 +54,19 @@ export async function searchItems(db: Firestore, uid: string, query: string): Pr
 }
 
 export async function updateItemMeta(
-  db: Firestore, uid: string, itemId: string, patch: { form?: Form; category?: Category },
+  db: Firestore, uid: string, itemId: string,
+  patch: { form?: Form; category?: Category; canonicalName?: string },
 ): Promise<void> {
   const ref = itemDoc(db, uid, itemId);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error(`Item ${itemId} not found`);
-  await setDoc(ref, { ...(snap.data() as Item), ...patch });
+  const next = { ...(snap.data() as Item), ...patch };
+  if (patch.canonicalName != null) next.nameLower = patch.canonicalName.toLowerCase();
+  await setDoc(ref, next);
+}
+
+export async function deleteItem(db: Firestore, uid: string, itemId: string): Promise<void> {
+  await deleteDoc(itemDoc(db, uid, itemId));
 }
 
 export function subscribeItems(db: Firestore, uid: string, cb: (items: Item[]) => void): () => void {

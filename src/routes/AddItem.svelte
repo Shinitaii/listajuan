@@ -1,7 +1,7 @@
 <script lang="ts">
   import { session } from '../lib/state/session.svelte';
   import { db } from '../lib/data/firebase';
-  import { createItem } from '../lib/data/items';
+  import { createItem, getItem } from '../lib/data/items';
   import { lastContextFor, type NewTripItemInput } from '../lib/data/trips';
   import { unitsFor, baseUnitFor, baseUnitLabel, pricePerBaseUnit, unitFactor } from '../lib/domain/units';
   import ItemPicker from './ItemPicker.svelte';
@@ -10,10 +10,16 @@
   import MarketPicker from '../lib/ui/MarketPicker.svelte';
   import QtyField from '../lib/ui/QtyField.svelte';
   import AppButton from '../lib/ui/AppButton.svelte';
-  import type { Item, Unit, Form, Category, Market } from '../lib/domain/types';
+  import type { Item, Unit, Form, Category, Market, TripItem } from '../lib/domain/types';
 
-  let { defaultMarketId = null, defaultMarketName = null, onSave } =
-    $props<{ defaultMarketId?: string | null; defaultMarketName?: string | null; onSave: (i: NewTripItemInput) => void }>();
+  let { defaultMarketId = null, defaultMarketName = null, existing = null, onMarketChange, onSave } =
+    $props<{
+      defaultMarketId?: string | null;
+      defaultMarketName?: string | null;
+      existing?: TripItem | null;
+      onMarketChange?: (id: string | null, name: string | null) => void;
+      onSave: (i: NewTripItemInput) => void;
+    }>();
   const uid = session.uid!;
 
   let item = $state<Item | null>(null);
@@ -39,6 +45,22 @@
   const baseUnit = $derived(item ? baseUnitFor(item.form) : 'piece');
   const ppu = $derived(pricePerBaseUnit(price, qty, unit));
 
+  // Edit mode: load the fixed item + seed fields from `existing` once.
+  let initialized = $state(false);
+  $effect(() => {
+    if (existing && !initialized) {
+      initialized = true;
+      marketId = existing.marketId;
+      marketName = existing.marketName;
+      qty = existing.quantity ?? 1;
+      unit = existing.unit;
+      variant = existing.variant ?? '';
+      price = existing.pricePaid;
+      priceTouched = true; // don't auto-prefill over the existing price
+      getItem(db, uid, existing.itemId).then((i) => { item = i; });
+    }
+  });
+
   // Keep the prefilled total proportional to qty/unit until the user overrides it.
   $effect(() => {
     if (lastPpu != null && !priceTouched && qty != null) {
@@ -63,7 +85,7 @@
     lastPpu = null; priceTouched = false; price = null; // brand-new item: no history to prefill
   }
 
-  function pickMarket(m: Market) { marketId = m.id; marketName = m.name; pickingMarket = false; }
+  function pickMarket(m: Market) { marketId = m.id; marketName = m.name; pickingMarket = false; onMarketChange?.(m.id, m.name); }
 
   function save() {
     if (!item) return;
@@ -75,7 +97,9 @@
 </script>
 
 <div class="add">
-  {#if !item && !newName}
+  {#if existing && !item}
+    <p class="lbl">Naglo-load…</p>
+  {:else if !item && !newName}
     <ItemPicker onPick={pick} />
   {:else if !item}
     <h2>Bagong item: "{newName}"</h2>

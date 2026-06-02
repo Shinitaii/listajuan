@@ -1,4 +1,4 @@
-# Listahan
+# ListaJuan
 
 A mobile, offline-first grocery-tracking app for a single Filipino household manager. She logs market trips, reuses an item library, checks what an item cost last time ("magkano ang liempo nung huli?"), sees per-trip totals, and compares this month's spend to last.
 
@@ -22,17 +22,12 @@ Requires **Node 20+**, **npm**, and a **Java runtime** (the Firestore emulator n
 
 ```bash
 npm install
-cp .env.example .env        # then fill in / keep VITE_USE_EMULATOR=true for local dev
-npm run dev                 # Vite dev server
+npm run dev                 # boots the Firebase emulators + Vite together
 ```
 
-For local development against the Firebase emulators, keep `VITE_USE_EMULATOR=true` in `.env` and run the emulators in another terminal:
+`npm run dev` runs against the **local emulators** — config comes from the committed `.env.development`, and the emulators are started for you (needs Java). First start takes ~15–20s.
 
-```bash
-npx firebase emulators:start --only auth,firestore
-```
-
-For production, set the real Firebase web config in `.env` (`VITE_FIREBASE_*`, `VITE_USE_EMULATOR=false`) and deploy `firestore.rules` + `firestore.indexes.json`.
+To run against **real Firebase** instead: `cp .env.example .env.production`, fill in your project's `VITE_FIREBASE_*` values, then `npm run dev:prod` (dev server) or `npm run build` (production build). Enable Anonymous sign-in in the Firebase console. Deploy `firestore.rules` + `firestore.indexes.json` for production.
 
 ## Commands
 

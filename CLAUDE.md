@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Listahan is a mobile, offline-first grocery-tracking app for a **single** Filipino household manager who has difficulty using apps. She logs market trips, reuses an item library, checks an item's last price, sees per-trip totals, and compares this month's spend to last. Built one-handed, at home, often offline at the market.
+ListaJuan is a mobile, offline-first grocery-tracking app for a **single** Filipino household manager who has difficulty using apps. She logs market trips, reuses an item library, checks an item's last price, sees per-trip totals, and compares this month's spend to last. Built one-handed, at home, often offline at the market.
 
 Design philosophy is **accessibility-first**: recognition over recall, one decision per screen, forgiving input. There is exactly **one confirmation dialog in the entire app** (delete trip); everything else is inline edit or swipe-with-undo. Filipino-first copy throughout. No emoji in the shipped UI — use a single bundled vector icon set (see spec "Iconography & assets").
 

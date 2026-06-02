@@ -7,7 +7,7 @@ import {
   type Auth,
 } from 'firebase/auth';
 
-const PROJECT_ID = 'listahan-dev';
+const PROJECT_ID = 'listajuan-dev';
 
 export interface TestCtx {
   app: FirebaseApp;

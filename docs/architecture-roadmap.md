@@ -1,4 +1,4 @@
-# Listahan — Architecture & Roadmap Assessment
+# ListaJuan — Architecture & Roadmap Assessment
 
 **Date:** 2026-06-02
 **Status:** Living document. Captures the post-v1 (Plans 1–3 merged) assessment of whether the current architecture naturally scales to the planned future features.

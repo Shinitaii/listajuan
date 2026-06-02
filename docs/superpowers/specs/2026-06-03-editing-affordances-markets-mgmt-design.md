@@ -21,6 +21,10 @@ After the redesign, several gaps surfaced:
 - **Merge log + summary into one Trip screen** (`/trip/:id`), always editable.
 - **Markets management** lives under a new **"Iba pa" (More) tab** → menu page → Markets page.
 - **Reuse the AddItem form** for line editing; **icon buttons** (Lucide Pencil/Trash2) for edit/remove everywhere; **delete + keep history** for both items and markets.
+- **Default market is a global Settings value** (on the user doc), not a per-trip prompt. Each trip seeds its **current market** from it; the current market is **sticky within the trip** (changing it in AddItem updates the trip's current market so subsequent items inherit), and is **overridable per line**.
+- **Market-aware prefill:** when an item is picked/added, its price prefills from that item's history **at the current market** (`lastContextFor(item, currentMarketId, variant)`), so the estimate reflects the right market.
+- **Group trip lines by `marketId`** (display the name) — fixes two same-named markets merging.
+- The item↔market relationship is **many-to-many, derived from `tripItems`** — no join collection.
 
 ## Data model
 
@@ -28,6 +32,8 @@ No new collections. Minor field/semantics changes:
 
 - `Item.purchaseCount` becomes **derived** (count of distinct trips containing the item), recomputed on change rather than incremented at save. Existing `last*` denorm fields unchanged in shape but now recomputed (not save-time-only).
 - `Trip.status` retained; **no longer locks editing**. `total`/`itemCount`/`marketNames` recomputed on every line mutation (not only at "Tapos").
+- `Trip.defaultMarketId` repurposed as the trip's **current market** (seeded from the user setting at creation; updated when the user changes market in AddItem). `Trip.defaultMarketName` added (denormalized, so the chip/labels never show an id without a name — fixes the prior latent bug).
+- **User doc `/users/{uid}`** gains `settings: { defaultMarketId: string | null; defaultMarketName: string | null }` — the global default market.
 - Markets, TripItem, forms/units, variants — unchanged from the prior spec.
 
 ## Data layer
@@ -44,6 +50,9 @@ No new collections. Minor field/semantics changes:
 
 `src/lib/data/items.ts`:
 - **Add `deleteItem(db, uid, itemId)`** (deletes the library doc only; tripItems keep their saved `label`). `updateItemMeta` extended to accept `canonicalName?` (rename → recompute `nameLower`).
+
+`src/lib/data/settings.ts` (new):
+- **`getUserSettings(db, uid)`** and **`subscribeUserSettings`** reading `/users/{uid}.settings`; **`setDefaultMarket(db, uid, marketId, marketName)`**. `createDraftTrip` seeds `defaultMarketId`/`defaultMarketName` from the user setting; **`setTripMarket(db, uid, tripId, marketId, marketName)`** updates the trip's current market (called when AddItem's market changes).
 
 All new/changed data-layer functions get emulator tests, including: mutating a saved trip's lines recomputes totals and does **not** double-count `purchaseCount`; `recomputeItem` after a remove falls back to the prior line / nulls; market rename/delete.
 
@@ -64,7 +73,7 @@ Renders:
 - If the trip has **no items yet** (just created), open the **AddItem** form directly so logging starts immediately; otherwise show the list with a **"＋ Magdagdag ng item"** button.
 - Items **grouped by market** with per-market subtotals.
 - Each line: label, `{qty} {unit} × ₱{price}` + normalized `₱{ppu}/{baseUnitLabel}`, the line total, and **edit (✎) / remove (🗑) icon buttons** beside the price.
-- **＋ Magdagdag ng item** → AddItem (add mode) for this trip → `addTripItem` (→ recompute).
+- **＋ Magdagdag ng item** → AddItem (add mode) for this trip → `addTripItem` (→ recompute). AddItem is passed the trip's **current market** (`defaultMarketId`/`defaultMarketName`) as the preselected market; if the user changes the market there, call `setTripMarket` so it sticks for the next item. Item price prefills from that market's history.
 - **Edit** on a line → AddItem in **edit mode**: item fixed; market, variant, qty, unit, price editable (live readout); save → `updateTripItem` (→ recompute).
 - **Remove** on a line → `removeTripItem` (→ recompute). Inline, no confirmation.
 - **Delete trip** → the single ConfirmDialog.
@@ -74,10 +83,11 @@ Renders:
 
 **Retire `draft.svelte.ts`** — `startNewTrip`/`resumeTrip`/`addToDraft`/`commitDraft` are replaced by: `createDraftTrip` (Home) + the Trip screen's own by-id subscription + direct `addTripItem`/`updateTripItem`/`removeTripItem`/`saveTrip` calls. Remove the store and its references.
 
-### Markets (`/markets`) under "Iba pa"
+### "Iba pa" tab → Markets + Settings
 
-- **TabBar** gains a 5th tab **"Iba pa"** (Lucide `Menu`/`MoreHorizontal`) → **More menu page (`/more`)** listing **"Mga tindahan"** (→ `/markets`); room for future entries.
-- **Markets page:** list of markets (name + type) each with edit/remove icon buttons; **"＋ Bagong tindahan"** creates one (reusing the creation UI). Edit = rename / change type. Remove = one confirmation; tripItems keep their `marketName`.
+- **TabBar** gains a 5th tab **"Iba pa"** (Lucide `Menu`/`MoreHorizontal`) → **More menu page (`/more`)** listing **"Mga tindahan"** (→ `/markets`) and **"Mga setting"** (→ `/settings`); room for future entries.
+- **Markets page (`/markets`):** list of markets (name + type) each with edit/remove icon buttons; **"＋ Bagong tindahan"** creates one (reusing the creation UI). Edit = rename / change type. Remove = one confirmation; tripItems keep their `marketName`.
+- **Settings page (`/settings`):** a **default market** picker (the MarketPicker, writing `setDefaultMarket`) — your usual market, preselected for new trips. Shows the current default; "wala" if unset. (Home for future settings.)
 
 ### Items (`/items`) — full CRUD
 
@@ -92,13 +102,13 @@ Renders:
 
 ## Out of scope (still parked)
 
-Recipes/saved lists, recommendations/ML, i18n, the trip-default-market wiring + same-name-market grouping carry-forwards from the prior spec.
+Recipes/saved lists, recommendations/ML, i18n. (The prior round's trip-default-market wiring and same-name-market grouping are now **in scope** — see Decisions.)
 
 ## Testing
 
-- **Emulator:** `recomputeItem`/`recomputeTrip` correctness; mutating a saved trip (add/edit/remove) recomputes totals and does not double-count `purchaseCount`; `saveTrip` no longer increments; market `updateMarket`/`deleteMarket`; `deleteItem` + history survival; item rename recomputes `nameLower`.
-- **e2e:** add an item to an already-saved trip from the Trip screen; edit a line (change market + price) via the AddItem editor and see the total update; remove a line; create an item on the Items page then log it; rename/delete an item; create/edit/delete a market under "Iba pa" → Tindahan.
+- **Emulator:** `recomputeItem`/`recomputeTrip` correctness; mutating a saved trip (add/edit/remove) recomputes totals and does not double-count `purchaseCount`; `saveTrip` no longer increments; market `updateMarket`/`deleteMarket`; `deleteItem` + history survival; item rename recomputes `nameLower`; `setDefaultMarket`/`getUserSettings` round-trip; `createDraftTrip` seeds market from the setting; grouping keyed by `marketId` (two same-named markets stay separate).
+- **e2e:** add an item to an already-saved trip from the Trip screen; edit a line (change market + price) via the AddItem editor and see the total update; remove a line; create an item on the Items page then log it; rename/delete an item; create/edit/delete a market under "Iba pa" → Tindahan; set a default market in Settings and confirm a new trip preselects it.
 
 ## Decomposition for planning
 
-One plan, phased: (1) data-layer `recompute*` + `saveTrip` change + market/item CRUD (emulator-tested); (2) `IconButton` primitive + AddItem edit-mode support; (3) the ONE Trip screen (`/trip/:id`) replacing both TripSummary and LogTrip — by-id subscription, add/edit/remove, Tapos-if-draft; (4) remove `/log` route + retire `draft.svelte.ts` + point "Bagong biyahe"/resume at `/trip/:id`; (5) Items full CRUD; (6) "Iba pa" tab + More menu + Markets page; (7) e2e + sweep.
+One plan, phased: (1) data-layer `recompute*` + `saveTrip` change + market/item CRUD + user-settings module + `marketId`-keyed grouping helper (emulator-tested); (2) `IconButton` primitive + AddItem edit-mode support + market preselect/sticky + market-aware prefill; (3) the ONE Trip screen (`/trip/:id`) replacing both TripSummary and LogTrip — by-id subscription, add/edit/remove, Tapos-if-draft, group by marketId; (4) remove `/log` route + retire `draft.svelte.ts` + point "Bagong biyahe"/resume at `/trip/:id` (seed market from settings); (5) Items full CRUD; (6) "Iba pa" tab + More menu + Markets page + Settings page (default market); (7) e2e + sweep.

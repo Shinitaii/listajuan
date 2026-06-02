@@ -31,3 +31,9 @@ ios/
 .firebase/
 
 .claude/settings.local.json
+
+# Playwright
+e2e/__screens__/*.png
+test-results/
+playwright-report/
+/playwright/.cache/

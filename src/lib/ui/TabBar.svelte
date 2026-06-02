@@ -1,13 +1,19 @@
 <script lang="ts">
   import { router, push } from 'svelte-spa-router';
-  import { House, ListChecks, Tag, ChartColumn } from 'lucide-svelte';
+  import { House, ListChecks, Tag, ChartColumn, Menu } from 'lucide-svelte';
   const tabs = [
     { path: '/', label: 'Home', icon: House },
     { path: '/biyahe', label: 'Biyahe', icon: ListChecks },
     { path: '/items', label: 'Items', icon: Tag },
     { path: '/gastos', label: 'Gastos', icon: ChartColumn },
+    { path: '/more', label: 'Iba pa', icon: Menu },
   ];
-  const isActive = (p: string) => (p === '/' ? router.location === '/' : router.location.startsWith(p));
+  const isActive = (p: string) => {
+    const loc = router.location;
+    if (p === '/') return loc === '/';
+    if (p === '/more') return loc.startsWith('/more') || loc.startsWith('/markets') || loc.startsWith('/settings');
+    return loc.startsWith(p);
+  };
 </script>
 
 <nav class="tabbar">

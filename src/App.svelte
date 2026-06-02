@@ -13,12 +13,18 @@
   import Gastos from './routes/Gastos.svelte';
   import Trip from './routes/Trip.svelte';
   import ItemHistory from './routes/ItemHistory.svelte';
+  import More from './routes/More.svelte';
+  import Markets from './routes/Markets.svelte';
+  import Settings from './routes/Settings.svelte';
 
   const routes = {
     '/': Home,
     '/biyahe': Biyahe,
     '/items': Items,
     '/gastos': Gastos,
+    '/more': More,
+    '/markets': Markets,
+    '/settings': Settings,
     '/trip/:tripId': Trip,
     '/item/:itemId': ItemHistory,
   };

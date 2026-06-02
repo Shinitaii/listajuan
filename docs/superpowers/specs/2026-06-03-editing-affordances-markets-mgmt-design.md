@@ -49,22 +49,30 @@ All new/changed data-layer functions get emulator tests, including: mutating a s
 
 ## Screens
 
-### Trip screen (`/trip/:id`) — merged, always editable
+### Trip screen (`/trip/:id`) — the ONE trip screen (logging + viewing + editing)
 
-Replaces both the old TripSummary and the LogTrip overview. Renders:
+There is **no separate `/log` screen.** `/log/:id` is removed (or redirects to `/trip/:id`). Logging a new trip, resuming a draft, and viewing/editing a saved trip are all the same screen — its only state difference is whether a "Tapos" button shows.
+
+**Entry points** all land here:
+- Home "Bagong biyahe" → `createDraftTrip` → `push('/trip/:id')`.
+- Biyahe "Ipagpatuloy" (draft) or a saved-trip row → `push('/trip/:id')`.
+
+**The screen loads the trip by id and subscribes live** (`getTrip` + `subscribeTripItems`) — it does NOT use a draft singleton. (The `draft.svelte.ts` store is retired; mutations call the data layer directly with the `tripId`.)
+
+Renders:
 - Total card (date, `N item(s)`, markets-visited chips).
+- If the trip has **no items yet** (just created), open the **AddItem** form directly so logging starts immediately; otherwise show the list with a **"＋ Magdagdag ng item"** button.
 - Items **grouped by market** with per-market subtotals.
 - Each line: label, `{qty} {unit} × ₱{price}` + normalized `₱{ppu}/{baseUnitLabel}`, the line total, and **edit (✎) / remove (🗑) icon buttons** beside the price.
-- **"＋ Magdagdag ng item"** → opens the **AddItem** form (add mode) for this trip.
-- **Edit** on a line → opens **AddItem in edit mode**: item fixed; market, variant, qty, unit, price editable (with the live readout); save calls `updateTripItem` (→ recompute).
-- **Remove** on a line → `removeTripItem` (→ recompute). Inline, no confirmation (undo-friendly philosophy; only trip-delete confirms).
+- **＋ Magdagdag ng item** → AddItem (add mode) for this trip → `addTripItem` (→ recompute).
+- **Edit** on a line → AddItem in **edit mode**: item fixed; market, variant, qty, unit, price editable (live readout); save → `updateTripItem` (→ recompute).
+- **Remove** on a line → `removeTripItem` (→ recompute). Inline, no confirmation.
 - **Delete trip** → the single ConfirmDialog.
-- If `status === 'draft'`: a **"Tapos — i-save"** button (flips to saved). Otherwise no finish button (already saved, still editable).
+- **Tapos — i-save** button shown only while `status === 'draft'`; flips draft→saved and navigates Home. A saved trip shows no finish button (it's done, but still fully editable if reopened).
 
-### LogTrip (`/log/:id`) — focused new-trip logging
+**Leaving is never "finished":** navigating back/away (tab bar, back) just leaves the trip as-is — a draft stays a draft (still shows under Biyahe "Ipagpatuloy"), a saved trip stays saved. Only "Tapos" changes status. This removes the "exit = finished" surprise.
 
-Kept for the immediate post-"Bagong biyahe" flow (overview + AddItem add mode). Its back control is relabelled **"Tapos muna"** (save & continue later — stays a draft, resumable). "Tapos — i-save" finalizes and navigates to `/trip/:id`. Both screens reuse AddItem and a shared grouped-list rendering; extract a shared component if duplication is meaningful, otherwise keep parallel.
-(If implementation finds the two fully redundant, collapsing `/log/:id` to just route into the Trip screen is acceptable — the Trip screen is the source of truth.)
+**Retire `draft.svelte.ts`** — `startNewTrip`/`resumeTrip`/`addToDraft`/`commitDraft` are replaced by: `createDraftTrip` (Home) + the Trip screen's own by-id subscription + direct `addTripItem`/`updateTripItem`/`removeTripItem`/`saveTrip` calls. Remove the store and its references.
 
 ### Markets (`/markets`) under "Iba pa"
 
@@ -93,4 +101,4 @@ Recipes/saved lists, recommendations/ML, i18n, the trip-default-market wiring + 
 
 ## Decomposition for planning
 
-One plan, phased: (1) data-layer `recompute*` + `saveTrip` change + market/item CRUD (emulator-tested); (2) `IconButton` primitive + AddItem edit-mode support; (3) merged Trip screen; (4) Items full CRUD; (5) "Iba pa" tab + More menu + Markets page; (6) LogTrip relabel/handoff; (7) e2e + sweep.
+One plan, phased: (1) data-layer `recompute*` + `saveTrip` change + market/item CRUD (emulator-tested); (2) `IconButton` primitive + AddItem edit-mode support; (3) the ONE Trip screen (`/trip/:id`) replacing both TripSummary and LogTrip — by-id subscription, add/edit/remove, Tapos-if-draft; (4) remove `/log` route + retire `draft.svelte.ts` + point "Bagong biyahe"/resume at `/trip/:id`; (5) Items full CRUD; (6) "Iba pa" tab + More menu + Markets page; (7) e2e + sweep.

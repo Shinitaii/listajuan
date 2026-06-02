@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { setupEmulator, teardownEmulator, clearFirestore, type TestCtx } from './testing/emulator';
-import { createItem, searchItems } from './items';
+import { createItem, searchItems, updateItemMeta, getItem } from './items';
 
 let ctx: TestCtx;
 
@@ -38,5 +38,17 @@ describe('searchItems', () => {
     });
     const results = await searchItems(ctx.db, ctx.uid, 'manok');
     expect(results.map((r) => r.canonicalName)).toEqual(['Chicken breast']);
+  });
+});
+
+describe('updateItemMeta', () => {
+  it('updates form and category', async () => {
+    const item = await createItem(ctx.db, ctx.uid, {
+      canonicalName: 'Test', category: 'iba_pa', form: 'bilang', defaultUnit: 'piraso',
+    });
+    await updateItemMeta(ctx.db, ctx.uid, item.id, { form: 'timbang', category: 'karne' });
+    const updated = await getItem(ctx.db, ctx.uid, item.id);
+    expect(updated?.form).toBe('timbang');
+    expect(updated?.category).toBe('karne');
   });
 });

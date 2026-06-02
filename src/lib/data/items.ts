@@ -53,6 +53,15 @@ export async function searchItems(db: Firestore, uid: string, query: string): Pr
   );
 }
 
+export async function updateItemMeta(
+  db: Firestore, uid: string, itemId: string, patch: { form?: Form; category?: Category },
+): Promise<void> {
+  const ref = itemDoc(db, uid, itemId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error(`Item ${itemId} not found`);
+  await setDoc(ref, { ...(snap.data() as Item), ...patch });
+}
+
 export function subscribeItems(db: Firestore, uid: string, cb: (items: Item[]) => void): () => void {
   return onSnapshot(itemsCol(db, uid), (snap) => cb(snap.docs.map((d) => d.data() as Item)));
 }

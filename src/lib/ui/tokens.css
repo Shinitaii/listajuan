@@ -1,0 +1,32 @@
+:root {
+  /* color — one accent, one emphasis, one destructive, neutrals */
+  --c-bg: #ffffff;
+  --c-surface: #f6f5f3;
+  --c-ink: #2b2a27;
+  --c-ink-soft: #6b6a66;
+  --c-accent: #2f6fa8;      /* primary action only */
+  --c-accent-ink: #ffffff;
+  --c-emphasis: #f0d978;    /* surfaced data: totals, deltas */
+  --c-danger: #c2543a;      /* destructive only */
+  /* type scale — body >=16, prices/qty >=20, hero 40-48 */
+  --fs-label: 14px;
+  --fs-body: 16px;
+  --fs-price: 22px;
+  --fs-hero: 44px;
+  /* spacing + targets */
+  --sp-screen: 16px;
+  --tap-min: 44px;
+  --btn-h: 54px;
+  --stepper-h: 56px;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--fs-body);
+  color: var(--c-ink);
+  background: var(--c-bg);
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; }

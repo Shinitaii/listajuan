@@ -14,3 +14,13 @@ export function tripTotal(items: Array<{ pricePaid: number | null }>): number {
 export function monthDelta(thisMonth: number, lastMonth: number): number {
   return thisMonth - lastMonth;
 }
+
+/** Inclusive start / exclusive end ISO dates for a 1-based month. */
+export function monthRange(year: number, month: number): { startISO: string; endISO: string } {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const startISO = `${year}-${pad(month)}-01`;
+  const ny = month === 12 ? year + 1 : year;
+  const nm = month === 12 ? 1 : month + 1;
+  const endISO = `${ny}-${pad(nm)}-01`;
+  return { startISO, endISO };
+}

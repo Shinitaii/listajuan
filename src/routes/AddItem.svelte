@@ -29,16 +29,29 @@
   let unit = $state<Unit>('piraso');
   let variant = $state('');
   let price = $state<number | null>(null);
+  // Historical per-base-unit for the picked stream + whether the user typed a price.
+  // The prefilled total tracks qty/unit (so it stays consistent with the readout)
+  // until the user edits the price field, after which we leave it alone.
+  let lastPpu = $state<number | null>(null);
+  let priceTouched = $state(false);
 
   const units = $derived(item ? unitsFor(item.form) : []);
   const baseUnit = $derived(item ? baseUnitFor(item.form) : 'piece');
   const ppu = $derived(pricePerBaseUnit(price, qty, unit));
 
+  // Keep the prefilled total proportional to qty/unit until the user overrides it.
+  $effect(() => {
+    if (lastPpu != null && !priceTouched && qty != null) {
+      price = Math.round(lastPpu * qty * unitFactor(unit));
+    }
+  });
+
   async function pick(r: Item | { isNew: true; name: string }) {
     if ('isNew' in r) { newName = r.name; return; } // show the form/category pickers
     item = r; unit = r.defaultUnit; variant = r.lastVariant ?? '';
+    priceTouched = false; price = null;
     const ctx = await lastContextFor(db, uid, r.id, marketId, variant || null);
-    if (ctx?.pricePerBaseUnit != null) price = Math.round(ctx.pricePerBaseUnit * qty * unitFactor(unit)); // estimate; user edits
+    lastPpu = ctx?.pricePerBaseUnit ?? null; // the $effect seeds the estimate
   }
 
   async function confirmNewItem() {
@@ -47,6 +60,7 @@
       canonicalName: newName.trim(), category: newCategory, form: newForm, defaultUnit: unitsFor(newForm)[0],
     });
     item = created; unit = created.defaultUnit; newName = '';
+    lastPpu = null; priceTouched = false; price = null; // brand-new item: no history to prefill
   }
 
   function pickMarket(m: Market) { marketId = m.id; marketName = m.name; pickingMarket = false; }
@@ -88,7 +102,7 @@
     <input class="variant" bind:value={variant} placeholder="walang laman = ordinaryo" />
 
     <p class="lbl">Presyo (kabuuan)</p>
-    <input class="price" type="number" inputmode="decimal" bind:value={price} placeholder="₱" />
+    <input class="price" type="number" inputmode="decimal" bind:value={price} oninput={() => (priceTouched = true)} placeholder="₱" />
     {#if ppu != null}<p class="readout">= ₱{Math.round(ppu).toLocaleString('en-PH')} / {baseUnitLabel(baseUnit)}</p>{/if}
 
     <AppButton onclick={save}>I-save ang item</AppButton>

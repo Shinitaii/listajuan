@@ -24,8 +24,12 @@ dist-ssr
 *.sw?
 
 # Project-specific
+# Env: .env.development (emulator) and .env.example ARE committed.
+# Real config stays local:
 .env
 .env.local
+.env.production
+.env.*.local
 android/
 ios/
 .firebase/

@@ -44,4 +44,5 @@ export interface TripItem {
   tripDate: string;   // ISO date, copied from the trip for collectionGroup queries
   uid: string;        // owner uid, denormalized so collectionGroup queries can be scoped + secured
   addedAt: number;    // client ms timestamp; defines insertion order within a trip
+  category: Category; // denormalized from the item at purchase time, for monthly category spend
 }

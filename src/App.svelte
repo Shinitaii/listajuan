@@ -11,6 +11,7 @@
   import Gastos from './routes/Gastos.svelte';
   import LogTrip from './routes/LogTrip.svelte';
   import TripSummary from './routes/TripSummary.svelte';
+  import ItemHistory from './routes/ItemHistory.svelte';
 
   const routes = {
     '/': Home,
@@ -19,6 +20,7 @@
     '/gastos': Gastos,
     '/log/:tripId': LogTrip,
     '/trip/:tripId': TripSummary,
+    '/item/:itemId': ItemHistory,
   };
 
   onMount(async () => {

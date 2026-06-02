@@ -51,6 +51,7 @@
   async function saveItem() {
     await addToDraft(uid, {
       itemId: picked!.id, label: pickedLabel, quantity: qty, unit, pricePaid: price, vendor: null,
+      category: picked!.category,
     });
     // reset for the next item
     picked = null; pickedLabel = ''; qty = 1; price = null; step = 1;

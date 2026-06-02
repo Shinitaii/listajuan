@@ -558,4 +558,6 @@ Create `e2e/__screens__/.gitkeep` and gitignore the generated PNGs (add `e2e/__s
 - **Swipe-to-remove a line item** (spec: item-level removal = swipe/undo) — `removeTripItem` exists in the data layer but no UI yet.
 - **Month picker** on Gastos (browse past months) — current month only in v1.
 - **Capacitor native shell** still unverified on a device (Playwright covers web only); do a manual `npx cap run android` pass before any release.
-- If layerchart proved heavier than its value for these simple charts, consider dropping it for the inline-SVG/CSS approach already present as the fallback.
+- If layerchart proved heavier than its value for these simple charts, consider dropping it for the inline-SVG/CSS approach already present as the fallback. (As built: layerchart IS used for the Gastos compare bars; the price-history sparkline uses inline SVG. Bundle is ~815 kB / ~264 kB gzip, mostly d3 — fine for a single-user offline app, but revisit if size matters.)
+- **Copy nit:** TripSummary shows "1 items" — add singular/plural handling ("1 item" / "N items").
+- **Emulator test flakiness:** `subscribeTripItems` still occasionally times out under emulator load and passes on re-run, even after raising timeouts. If it keeps recurring, consider awaiting a settle between the two `addTripItem` writes in that test, or a retry wrapper.

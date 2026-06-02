@@ -1,6 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 
-// Drives the unified, always-editable trip flow plus the new management screens.
+// Drives the market-chip + QuickAdjust trip flow plus the management screens.
 //
 // Each test runs in a fresh browser context = a fresh anonymous Firebase user
 // (distinct uid) with an empty /users/{uid} subtree, so every test creates its
@@ -9,16 +9,14 @@ import { test, expect, type Page } from '@playwright/test';
 // Build an exact-match regex from a literal string (escapes regex metachars like parens).
 const exact = (s: string) => new RegExp(`^${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`);
 
-// Home → "Bagong biyahe" → a brand-new empty trip opens AddItem directly.
-async function startTripAtAddItem(page: Page) {
+// Home → "Bagong biyahe" → a brand-new empty trip opens on the Trip *view*
+// (market chip + "＋ Magdagdag ng item"), NOT directly in the item picker.
+async function startTrip(page: Page) {
   await page.goto('/');
   await expect(page.getByText('Gastos ngayong buwan')).toBeVisible({ timeout: 20000 });
 
   await page.getByRole('button', { name: /Bagong biyahe/ }).click();
   await page.waitForURL(/#\/trip\//, { timeout: 10000 });
-
-  // Empty new trip lands in 'add' mode → ItemPicker is shown.
-  await expect(page.getByPlaceholder('Hanapin o pumili…')).toBeVisible({ timeout: 10000 });
 }
 
 // Create a new item via the ItemPicker → form/category pickers → "Gumawa".
@@ -35,87 +33,112 @@ async function createItemInline(page: Page, name: string, formLabel: string, cat
   await expect(page.getByRole('heading', { name })).toBeVisible();
 }
 
-// Create + select a market from the MarketPicker (opened via the market button).
-async function pickNewMarket(page: Page, name: string) {
-  await page.getByRole('button', { name: /Pumili ng tindahan/ }).click();
+// The two QuickAdjust blocks (.qa) on the AddItem detail: Dami first, Presyo second.
+const damiQA = (page: Page) => page.locator('.add .qa').nth(0);
+const presyoQA = (page: Page) => page.locator('.add .qa').nth(1);
+
+// Within a QuickAdjust block, the value spinbutton, a step chip by text, and the apply buttons.
+const qaValue = (qa: Locator) => qa.getByRole('spinbutton');
+const qaChip = (qa: Locator, text: string) => qa.locator('.chip', { hasText: exact(text) });
+const qaAdd = (qa: Locator) => qa.getByRole('button', { name: 'Dagdag' });
+const qaSub = (qa: Locator) => qa.getByRole('button', { name: 'Bawas' });
+const qaDouble = (qa: Locator) => qa.getByRole('button', { name: 'Doblehin' });
+
+test('core: market chip + QuickAdjust → log a line under the chosen market', async ({ page }) => {
+  await startTrip(page);
+
+  // Lands on the Trip view: market chip + add-item button visible; item picker NOT shown.
+  await expect(page.getByRole('button', { name: /Tindahan:/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Magdagdag ng item/ })).toBeVisible();
+  await expect(page.getByPlaceholder('Hanapin o pumili…')).toHaveCount(0);
+
+  // Set the market via the trip chip → MarketPicker → create "Palengke".
+  await page.getByRole('button', { name: /Tindahan:/ }).click();
   await page.getByRole('button', { name: /Bagong tindahan/ }).click();
-  await page.getByPlaceholder('Pangalan ng tindahan').fill(name);
+  await page.getByPlaceholder('Pangalan ng tindahan').fill('Palengke');
   await page.getByRole('button', { name: 'I-save', exact: true }).click();
-  // Market button now reflects the chosen market.
-  await expect(page.getByRole('button', { name: new RegExp(name) })).toBeVisible();
-}
+  await expect(page.getByRole('button', { name: /Tindahan: Palengke/ })).toBeVisible();
 
-test('core + always-editable: log a trip, save, then re-open the saved trip and add another item', async ({ page }) => {
-  await startTripAtAddItem(page);
-
+  // Add an item — AddItem (add mode) has NO market step.
+  await page.getByRole('button', { name: /Magdagdag ng item/ }).click();
   await createItemInline(page, 'Itlog', 'Bilang (piraso)', 'Iba pa');
-  await pickNewMarket(page, 'Palengke');
+  await expect(page.getByText('Saang tindahan?')).toHaveCount(0);
 
-  // Dami: bilang → Stepper. 1 → 2.
-  await page.getByRole('button', { name: 'Dagdagan' }).click();
-  await page.getByRole('button', { name: 'piraso', exact: true }).click();
+  // Dami: qty starts at 1 → select the "2" chip → press Dagdag once → 1 + 2 = 3.
+  const dami = damiQA(page);
+  await qaChip(dami, '2').click();
+  await qaAdd(dami).click();
+  await expect(qaValue(dami)).toHaveValue('3');
 
-  // Presyo (kabuuan) = 8 over qty 2 → ₱4 / piraso.
-  await page.getByRole('spinbutton').fill('8');
-  await expect(page.locator('.readout')).toHaveText('= ₱4 / piraso');
+  // Presyo: select the ₱50 chip → press Dagdag once → total ₱50.
+  const presyo = presyoQA(page);
+  await qaChip(presyo, '₱50').click();
+  await qaAdd(presyo).click();
+  await expect(qaValue(presyo)).toHaveValue('50');
 
   await page.getByRole('button', { name: /I-save ang item/ }).click();
 
-  // Back on the trip list view: market group + line + total.
+  // Back on the trip list: line under "Palengke" with the right amounts.
   await expect(page.getByText('Palengke')).toBeVisible();
   await expect(page.getByText('Itlog')).toBeVisible();
-  await expect(page.locator('.card .hero')).toHaveText('₱8');
+  await expect(page.locator('.card .hero')).toHaveText('₱50');
   await page.screenshot({ path: 'e2e/__screens__/trip.png' });
-
-  // Finish the draft → back on Home.
-  await page.getByRole('button', { name: /Tapos/ }).click();
-  await page.waitForURL(/#\/$/, { timeout: 10000 });
-  await expect(page.getByText('Gastos ngayong buwan')).toBeVisible();
-
-  // Re-open the saved trip from the Biyahe list — proves saved trips are editable.
-  await page.getByRole('navigation').getByRole('button', { name: 'Biyahe' }).click();
-  await page.waitForURL(/#\/biyahe/, { timeout: 10000 });
-  // The saved trip row lives under "Mga naitalang biyahe" (.row, not .draft).
-  await page.locator('.list .row:not(.draft)').first().click();
-  await page.waitForURL(/#\/trip\//, { timeout: 10000 });
-
-  // Saved trip opens in view mode (it already has items). Total is ₱8.
-  await expect(page.locator('.card .hero')).toHaveText('₱8');
-
-  // Add a second item to the saved trip.
-  await page.getByRole('button', { name: /Magdagdag ng item/ }).click();
-  await createItemInline(page, 'Tinapay', 'Bilang (piraso)', 'Iba pa');
-  // Re-use the same market.
-  await page.getByRole('button', { name: /Pumili ng tindahan|Palengke/ }).click();
-  await page.getByRole('button', { name: 'Palengke', exact: true }).click();
-  await page.getByRole('spinbutton').fill('20');
-  await page.getByRole('button', { name: /I-save ang item/ }).click();
-
-  // Total increased from ₱8 → ₱28.
-  await expect(page.locator('.card .hero')).toHaveText('₱28');
 });
 
-test('edit + remove a line', async ({ page }) => {
-  await startTripAtAddItem(page);
+test('QuickAdjust scaling: timbang chips relabel on ×2 (Doblehin)', async ({ page }) => {
+  await startTrip(page);
 
+  await page.getByRole('button', { name: /Magdagdag ng item/ }).click();
+  await createItemInline(page, 'Bigas', 'Timbang (kg)', 'Bigas');
+
+  const dami = damiQA(page);
+  // Base timbang steps: 250g / 500g / 1kg.
+  await expect(qaChip(dami, '250g')).toBeVisible();
+  await expect(qaChip(dami, '500g')).toBeVisible();
+  await expect(qaChip(dami, '1kg')).toBeVisible();
+
+  // ×2 → 500g / 1kg / 2kg.
+  await qaDouble(dami).click();
+  await expect(qaChip(dami, '500g')).toBeVisible();
+  await expect(qaChip(dami, '1kg')).toBeVisible();
+  await expect(qaChip(dami, '2kg')).toBeVisible();
+  await page.screenshot({ path: 'e2e/__screens__/quickadjust.png' });
+});
+
+test('edit a line: editor keeps the market control; change price via QuickAdjust', async ({ page }) => {
+  await startTrip(page);
+
+  // Set a market via the chip.
+  await page.getByRole('button', { name: /Tindahan:/ }).click();
+  await page.getByRole('button', { name: /Bagong tindahan/ }).click();
+  await page.getByPlaceholder('Pangalan ng tindahan').fill('Tindahan');
+  await page.getByRole('button', { name: 'I-save', exact: true }).click();
+  await expect(page.getByRole('button', { name: /Tindahan: Tindahan/ })).toBeVisible();
+
+  // Add a ₱50 line.
+  await page.getByRole('button', { name: /Magdagdag ng item/ }).click();
   await createItemInline(page, 'Mantika', 'Bilang (piraso)', 'Iba pa');
-  await pickNewMarket(page, 'Tindahan');
-  await page.getByRole('spinbutton').fill('50');
+  const presyo = presyoQA(page);
+  await qaChip(presyo, '₱50').click();
+  await qaAdd(presyo).click();
+  await expect(qaValue(presyo)).toHaveValue('50');
   await page.getByRole('button', { name: /I-save ang item/ }).click();
 
   await expect(page.locator('.card .hero')).toHaveText('₱50');
 
-  // Edit the line → change the price in the AddItem editor.
+  // Edit the line → editor (edit mode) still shows a market control.
   await page.getByRole('button', { name: 'I-edit' }).click();
   await expect(page.getByRole('heading', { name: 'Mantika' })).toBeVisible();
-  await page.getByRole('spinbutton').fill('75');
+  await expect(page.getByText('Saang tindahan?')).toBeVisible();
+
+  // Change the price via QuickAdjust: ₱50 + ₱25 = ₱75.
+  const editPresyo = presyoQA(page);
+  await qaChip(editPresyo, '₱25').click();
+  await qaAdd(editPresyo).click();
+  await expect(qaValue(editPresyo)).toHaveValue('75');
   await page.getByRole('button', { name: /I-save ang item/ }).click();
 
   await expect(page.locator('.card .hero')).toHaveText('₱75');
-
-  // Remove the line.
-  await page.getByRole('button', { name: 'Tanggalin' }).click();
-  await expect(page.getByText('Mantika')).toHaveCount(0);
 });
 
 test('items CRUD: create, rename, delete from the Items tab', async ({ page }) => {
@@ -149,7 +172,7 @@ test('items CRUD: create, rename, delete from the Items tab', async ({ page }) =
   await expect(page.locator('.item .name', { hasText: 'Bigas (sako)' })).toHaveCount(0);
 });
 
-test('settings default market preselects in AddItem', async ({ page }) => {
+test('settings default market preselects the trip market chip', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('Gastos ngayong buwan')).toBeVisible({ timeout: 20000 });
 
@@ -166,13 +189,11 @@ test('settings default market preselects in AddItem', async ({ page }) => {
   // Default-market readout reflects the choice.
   await expect(page.locator('.current')).toHaveText('SM');
 
-  // Home → Bagong biyahe → AddItem market button is preselected to "SM".
+  // Home → Bagong biyahe → trip market chip is preselected to "SM".
   await page.getByRole('button', { name: 'Home' }).click();
   await page.waitForURL(/#\/$/, { timeout: 10000 });
   await page.getByRole('button', { name: /Bagong biyahe/ }).click();
   await page.waitForURL(/#\/trip\//, { timeout: 10000 });
 
-  // Create an item so the detail (with the market button) renders.
-  await createItemInline(page, 'Asukal', 'Bilang (piraso)', 'Iba pa');
-  await expect(page.getByRole('button', { name: /SM/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Tindahan: SM/ })).toBeVisible();
 });

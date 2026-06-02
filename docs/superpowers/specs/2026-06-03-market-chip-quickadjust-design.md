@@ -30,16 +30,16 @@ New `src/lib/ui/QuickAdjust.svelte`. Props: `value` (bindable number), `baseStep
 
 ```
             [   2.5 kg   ]                  ← central value, tap to type any number
-| +/− | | 250g | | 500g | | 1kg | | ×2 |
-|     | |                         | ÷2 |
+ | 250g | | 500g | | 1kg | | ×2 | | + |
+ |      | |      | |     | | ÷2 | | - |
 ```
 
 - **Central value** — large, tap-to-edit; clamped to ≥ `min`; decimals allowed.
-- **Direction toggle** `＋` / `−`, default `＋`, persistent. **Colour state: add = green accent, subtract = red/danger accent** applied to the toggle + step chips, so the direction is unmistakable (mitigates "forgot I'm subtracting").
-- **Three step chips** = `baseSteps` × `scale` (a local multiplier, default 1). Tapping a chip applies `value = max(min, round2(value ± step))` in the current direction.
-- **`×2` / `÷2` buttons** multiply / divide `scale` by 2 — sliding the chip window along the doubling ladder (e.g. timbang `250g/500g/1kg → 500g/1kg/2kg → 1kg/2kg/4kg`, and back down to `125g/250g/500g`). Lets you reach a magnitude, then nudge finely (e.g. ÷2 back down to add 500g at 4kg).
+- **Three step chips** = `baseSteps` × `scale` (local multiplier, default 1). Tapping a chip **selects it as the active step** (highlighted); default active = the first chip.
+- **`＋` / `−` buttons** (stacked, ＋ top / − bottom) apply the active step: `＋` → `value = round2(value + step)`, `−` → `value = max(min, round2(value − step))`. Repeated taps repeat. **Colour: ＋ is green, − is red/danger** — the action's direction is unmistakable.
+- **`×2` / `÷2` buttons** (stacked) multiply / divide `scale` by 2 — sliding the chip window along the doubling ladder (e.g. timbang `250g/500g/1kg → 500g/1kg/2kg → 1kg/2kg/4kg`, and back down to `125g/250g/500g`). Lets you reach a magnitude, then nudge finely (e.g. ÷2 back down to add 500g at 4kg). The active-chip position is preserved across scaling.
 - **Chip labels** are derived from the scaled value by `kind`: `weight` shows `<1kg` as `g` else `kg`; `volume` shows `<1L` as `ml` else `L`; `price` shows `₱{n}`; `count` shows the bare number. So labels reformat as you scale.
-- All tap targets ≥44px; no emoji; aria-labels "Dagdag"/"Bawas" on the toggle, "Doblehin"/"Hatiin" on ×2/÷2.
+- All tap targets ≥44px; no emoji; aria-labels "Dagdag" (＋) / "Bawas" (−), "Doblehin" (×2) / "Hatiin" (÷2).
 
 ### Base step triples
 

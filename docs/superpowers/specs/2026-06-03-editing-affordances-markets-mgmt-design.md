@@ -104,6 +104,8 @@ Renders:
 
 Recipes/saved lists, recommendations/ML, i18n. (The prior round's trip-default-market wiring and same-name-market grouping are now **in scope** — see Decisions.)
 
+**Google sign-in is the next round** (its own spec): Google OAuth + anonymous→Google `linkWithCredential`, web flow first (Auth-emulator testable) then the native Capacitor plugin (Google Play Services) once the Android/iOS projects are set up. The **Settings page built this round is where the "I-link ang Google account" entry will live.** Auth code stays behind `src/lib/data/auth.ts`.
+
 ## Testing
 
 - **Emulator:** `recomputeItem`/`recomputeTrip` correctness; mutating a saved trip (add/edit/remove) recomputes totals and does not double-count `purchaseCount`; `saveTrip` no longer increments; market `updateMarket`/`deleteMarket`; `deleteItem` + history survival; item rename recomputes `nameLower`; `setDefaultMarket`/`getUserSettings` round-trip; `createDraftTrip` seeds market from the setting; grouping keyed by `marketId` (two same-named markets stay separate).

@@ -38,7 +38,7 @@
   <div class="card">
     <div class="lbl">Kabuuang gastos · {trip?.date ?? ''}</div>
     <div class="hero">{peso(total)}</div>
-    <div class="chips"><span>{items.length} items</span>{#if trip?.storeName}<span>{trip.storeName}</span>{/if}</div>
+    <div class="chips"><span>{items.length} item{items.length === 1 ? '' : 's'}</span>{#if trip?.storeName}<span>{trip.storeName}</span>{/if}</div>
   </div>
 
   <div class="list">

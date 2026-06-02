@@ -51,7 +51,7 @@
   <div class="list">
     {#each trips.recent as t}
       <button class="row" onclick={() => push(`/trip/${t.id}`)}>
-        <div><div class="name">{t.name}</div><div class="sub">{t.itemCount} items · {t.storeName}</div></div>
+        <div><div class="name">{t.name}</div><div class="sub">{t.itemCount} item{t.itemCount === 1 ? '' : 's'} · {t.storeName}</div></div>
         <div class="price">{peso(t.total)}</div>
       </button>
     {/each}

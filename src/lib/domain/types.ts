@@ -46,11 +46,18 @@ export interface Trip {
   itemCount: number;
   marketNames: string[];
   defaultMarketId: string | null;
+  defaultMarketName: string | null;
   notes: string | null;
+}
+
+export interface UserSettings {
+  defaultMarketId: string | null;
+  defaultMarketName: string | null;
 }
 
 export interface TripItem {
   id: string;
+  tripId: string;
   itemId: string;
   label: string;
   quantity: number | null;

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { setupEmulator, teardownEmulator, clearFirestore, type TestCtx } from './testing/emulator';
 import { createItem } from './items';
 import { createDraftTrip, addTripItem, getTripItems } from './trips';
+import { recomputeItem, recomputeTrip, groupByMarket } from './trips';
 
 let ctx: TestCtx;
 beforeAll(async () => { ctx = await setupEmulator(); });
@@ -47,7 +48,7 @@ describe('saveTrip fan-out', () => {
     expect(saved.itemCount).toBe(2);
   });
 
-  it('updates the parent item last context fields and bumps purchaseCount', async () => {
+  it('derives the parent item last context fields and purchaseCount (one trip → 1)', async () => {
     const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg' });
     const trip = await createDraftTrip(ctx.db, ctx.uid, { name: 'Palengke', date: '2026-05-31' });
     await addTripItem(ctx.db, ctx.uid, trip.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, marketId: 'm1', marketName: 'Cartimar', variant: null, category: 'karne' });
@@ -61,7 +62,7 @@ describe('saveTrip fan-out', () => {
     expect(updated?.purchaseCount).toBe(1);
   });
 
-  it('counts the same item on multiple lines of one trip as a single purchase, latest line wins', async () => {
+  it('counts the same item on multiple lines of one trip as a single purchase, newest line wins', async () => {
     const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg' });
     const trip = await createDraftTrip(ctx.db, ctx.uid, { name: 'Palengke', date: '2026-05-31' });
     await addTripItem(ctx.db, ctx.uid, trip.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, marketId: 'm1', marketName: 'Cartimar', variant: null, category: 'karne' });
@@ -70,20 +71,9 @@ describe('saveTrip fan-out', () => {
     await saveTrip(ctx.db, ctx.uid, trip.id);
 
     const updated = await getItem(ctx.db, ctx.uid, item.id);
-    expect(updated?.purchaseCount).toBe(1);
+    expect(updated?.purchaseCount).toBe(1); // still one distinct trip
     expect(updated?.lastPricePerBaseUnit).toBe(300);
     expect(updated?.lastMarketName).toBe('Puregold');
-  });
-
-  it('refuses to re-save an already-saved trip (no double fan-out)', async () => {
-    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg' });
-    const trip = await createDraftTrip(ctx.db, ctx.uid, { name: 'Palengke', date: '2026-05-31' });
-    await addTripItem(ctx.db, ctx.uid, trip.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, marketId: null, marketName: null, variant: null, category: 'karne' });
-    await saveTrip(ctx.db, ctx.uid, trip.id);
-
-    await expect(saveTrip(ctx.db, ctx.uid, trip.id)).rejects.toThrow();
-    const updated = await getItem(ctx.db, ctx.uid, item.id);
-    expect(updated?.purchaseCount).toBe(1); // not double-counted
   });
 });
 
@@ -196,5 +186,51 @@ describe('lastContextFor', () => {
     const ctxM2 = await lastContextFor(ctx.db, ctx.uid, item.id, m2, '6-pack');
     expect(ctxM2?.pricePaid).toBe(54);
     expect(ctxM2?.pricePerBaseUnit).toBe(9);   // 54 / (6*1)
+  });
+});
+
+describe('always-editable recompute', () => {
+  it('recomputeItem derives last* + purchaseCount from history (distinct trips)', async () => {
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg' });
+    const t1 = await createDraftTrip(ctx.db, ctx.uid, { name: 'A', date: '2026-06-01' });
+    await addTripItem(ctx.db, ctx.uid, t1.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 300, marketId: 'm1', marketName: 'Palengke', variant: null, category: 'karne' });
+    const t2 = await createDraftTrip(ctx.db, ctx.uid, { name: 'B', date: '2026-06-02' });
+    await addTripItem(ctx.db, ctx.uid, t2.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, marketId: 'm2', marketName: 'SM', variant: null, category: 'karne' });
+    const updated = await getItem(ctx.db, ctx.uid, item.id);
+    expect(updated?.purchaseCount).toBe(2);              // two distinct trips
+    expect(updated?.lastPricePerBaseUnit).toBe(320);     // newest
+    expect(updated?.lastMarketName).toBe('SM');
+  });
+
+  it('removing the newest line recomputes back to the prior line', async () => {
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg' });
+    const t = await createDraftTrip(ctx.db, ctx.uid, { name: 'A', date: '2026-06-01' });
+    const a = await addTripItem(ctx.db, ctx.uid, t.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 300, marketId: 'm1', marketName: 'Palengke', variant: null, category: 'karne' });
+    const t2 = await createDraftTrip(ctx.db, ctx.uid, { name: 'B', date: '2026-06-02' });
+    const b = await addTripItem(ctx.db, ctx.uid, t2.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 320, marketId: 'm2', marketName: 'SM', variant: null, category: 'karne' });
+    await removeTripItem(ctx.db, ctx.uid, t2.id, b.id);
+    const updated = await getItem(ctx.db, ctx.uid, item.id);
+    expect(updated?.purchaseCount).toBe(1);
+    expect(updated?.lastPricePerBaseUnit).toBe(300);
+  });
+
+  it('editing a saved trip recomputes its total and never double-counts purchaseCount', async () => {
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg' });
+    const t = await createDraftTrip(ctx.db, ctx.uid, { name: 'A', date: '2026-06-01' });
+    const a = await addTripItem(ctx.db, ctx.uid, t.id, { itemId: item.id, label: 'Liempo', quantity: 1, unit: 'kg', pricePaid: 300, marketId: 'm1', marketName: 'Palengke', variant: null, category: 'karne' });
+    await saveTrip(ctx.db, ctx.uid, t.id);
+    await updateTripItem(ctx.db, ctx.uid, t.id, a.id, { pricePaid: 350 });
+    const trip = await getTrip(ctx.db, ctx.uid, t.id);
+    const updated = await getItem(ctx.db, ctx.uid, item.id);
+    expect(trip?.total).toBe(350);
+    expect(updated?.purchaseCount).toBe(1); // still one trip; no double-count
+  });
+
+  it('groupByMarket keys by marketId, not name (same-named markets stay separate)', async () => {
+    const a = { marketId: 'm1', marketName: 'Palengke', pricePaid: 10 } as any;
+    const b = { marketId: 'm2', marketName: 'Palengke', pricePaid: 20 } as any;
+    const groups = groupByMarket([a, b]);
+    expect(groups).toHaveLength(2);
+    expect(groups.map((g) => g.subtotal)).toEqual([10, 20]);
   });
 });

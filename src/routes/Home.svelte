@@ -3,8 +3,8 @@
   import { Hand } from 'lucide-svelte';
   import { trips } from '../lib/state/trips.svelte';
   import { session } from '../lib/state/session.svelte';
-  import { startNewTrip } from '../lib/state/draft.svelte';
-  import { monthlyTotal } from '../lib/data/trips';
+  import { settings } from '../lib/state/settings.svelte';
+  import { monthlyTotal, createDraftTrip } from '../lib/data/trips';
   import { db } from '../lib/data/firebase';
   import { monthDelta } from '../lib/domain/calc';
   import AppButton from '../lib/ui/AppButton.svelte';
@@ -31,10 +31,12 @@
   const peso = (n: number) => '₱' + Math.round(n).toLocaleString('en-PH');
 
   async function newTrip() {
-    const uid = session.uid!;
     const today = new Date().toISOString().slice(0, 10);
-    const id = await startNewTrip(uid, { name: 'Biyahe', date: today });
-    push(`/log/${id}`);
+    const s = settings.value;
+    const trip = await createDraftTrip(db, session.uid!, {
+      name: 'Biyahe', date: today, defaultMarketId: s.defaultMarketId, defaultMarketName: s.defaultMarketName,
+    });
+    push(`/trip/${trip.id}`);
   }
 </script>
 
@@ -50,7 +52,7 @@
   </div>
 
   {#if trips.drafts.length}
-    <button class="resume" onclick={() => push(`/log/${trips.drafts[0].id}`)}>
+    <button class="resume" onclick={() => push(`/trip/${trips.drafts[0].id}`)}>
       Ipagpatuloy — {trips.drafts[0].name} ›
     </button>
   {/if}

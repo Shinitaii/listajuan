@@ -20,7 +20,7 @@
     <div class="lbl">Hindi tapos</div>
     <div class="list">
       {#each trips.drafts as t (t.id)}
-        <button class="row draft" onclick={() => push(`/log/${t.id}`)}>
+        <button class="row draft" onclick={() => push(`/trip/${t.id}`)}>
           <RotateCcw size={20} />
           <div class="grow"><div class="name">{t.name}</div>
             <div class="sub">Ipagpatuloy</div></div>

@@ -44,6 +44,7 @@ export interface Trip {
   status: TripStatus;
   total: number;
   itemCount: number;
+  marketNames: string[];
   defaultMarketId: string | null;
   notes: string | null;
 }

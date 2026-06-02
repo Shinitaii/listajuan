@@ -2,8 +2,15 @@
   import { push } from 'svelte-spa-router';
   import { trips } from '../lib/state/trips.svelte';
   import { RotateCcw } from 'lucide-svelte';
+  import type { Trip } from '../lib/domain/types';
 
   const peso = (n: number) => '₱' + Math.round(n).toLocaleString('en-PH');
+  const marketLabel = (t: Trip) =>
+    t.marketNames.length
+      ? t.marketNames.length <= 2
+        ? t.marketNames.join(' + ')
+        : t.marketNames.length + ' tindahan'
+      : '—';
 </script>
 
 <section class="screen">
@@ -16,7 +23,7 @@
         <button class="row draft" onclick={() => push(`/log/${t.id}`)}>
           <RotateCcw size={20} />
           <div class="grow"><div class="name">{t.name}</div>
-            <div class="sub">Ipagpatuloy{t.storeName ? ' · ' + t.storeName : ''}</div></div>
+            <div class="sub">Ipagpatuloy</div></div>
           <div class="go">›</div>
         </button>
       {/each}
@@ -28,7 +35,7 @@
     {#each trips.recent as t (t.id)}
       <button class="row" onclick={() => push(`/trip/${t.id}`)}>
         <div class="grow"><div class="name">{t.name}</div>
-          <div class="sub">{t.date} · {t.itemCount} item{t.itemCount === 1 ? '' : 's'}{t.storeName ? ' · ' + t.storeName : ''}</div></div>
+          <div class="sub">{t.date} · {marketLabel(t)} · {t.itemCount} item{t.itemCount === 1 ? '' : 's'}</div></div>
         <div class="price">{peso(t.total)}</div>
       </button>
     {/each}

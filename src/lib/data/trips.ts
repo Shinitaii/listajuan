@@ -26,6 +26,7 @@ export async function createDraftTrip(db: Firestore, uid: string, input: NewTrip
     status: 'draft',
     total: 0,
     itemCount: 0,
+    marketNames: [],
   };
   await setDoc(ref, trip);
   return trip;
@@ -94,8 +95,14 @@ export async function saveTrip(db: Firestore, uid: string, tripId: string): Prom
   const total = tripTotal(tripItems);
   const itemCount = tripItems.length;
 
+  // Distinct non-null market names, first-seen order, for the trip-list rows.
+  const marketNames: string[] = [];
+  for (const ti of tripItems) {
+    if (ti.marketName != null && !marketNames.includes(ti.marketName)) marketNames.push(ti.marketName);
+  }
+
   const batch = writeBatch(db);
-  batch.set(tripRef, { ...trip, status: 'saved', total, itemCount });
+  batch.set(tripRef, { ...trip, status: 'saved', total, itemCount, marketNames });
 
   // Fan-out: update each distinct item's denormalized last-price fields.
   // We aggregate per itemId FIRST because a WriteBatch applies only one write
@@ -127,7 +134,7 @@ export async function saveTrip(db: Firestore, uid: string, tripId: string): Prom
   }
 
   await batch.commit();
-  return { ...trip, status: 'saved', total, itemCount };
+  return { ...trip, status: 'saved', total, itemCount, marketNames };
 }
 
 /**

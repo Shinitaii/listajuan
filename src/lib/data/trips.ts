@@ -3,14 +3,15 @@ import {
   query, collectionGroup, where, orderBy, limit, onSnapshot, type Firestore,
 } from 'firebase/firestore';
 import { tripsCol, tripDoc, tripItemsCol, itemDoc } from './paths';
-import { pricePerUnit, tripTotal, monthRange } from '../domain/calc';
+import { tripTotal, monthRange } from '../domain/calc';
+import { baseUnitFor, pricePerBaseUnit } from '../domain/units';
+import { getItem } from './items';
 import type { Trip, TripItem, Unit, Category } from '../domain/types';
 
 export interface NewTripInput {
   name: string;
-  storeName: string;
   date: string; // ISO
-  vendor?: string | null;
+  defaultMarketId?: string | null;
   notes?: string | null;
 }
 
@@ -20,8 +21,7 @@ export async function createDraftTrip(db: Firestore, uid: string, input: NewTrip
     id: ref.id,
     name: input.name,
     date: input.date,
-    storeName: input.storeName,
-    vendor: input.vendor ?? null,
+    defaultMarketId: input.defaultMarketId ?? null,
     notes: input.notes ?? null,
     status: 'draft',
     total: 0,
@@ -37,7 +37,9 @@ export interface NewTripItemInput {
   quantity: number | null;
   unit: Unit;
   pricePaid: number | null;
-  vendor: string | null;
+  marketId: string | null;
+  marketName: string | null;
+  variant: string | null;
   category: Category;
 }
 
@@ -47,21 +49,27 @@ export async function addTripItem(
   const tripSnap = await getDoc(tripDoc(db, uid, tripId));
   if (!tripSnap.exists()) throw new Error(`Trip ${tripId} not found`);
   const tripDate = (tripSnap.data() as Trip).date;
+  const item = await getItem(db, uid, input.itemId);
+  if (!item) throw new Error(`Item ${input.itemId} not found`);
+  const baseUnit = baseUnitFor(item.form);
 
   const ref = doc(tripItemsCol(db, uid, tripId));
   const tripItem: TripItem = {
     id: ref.id,
     itemId: input.itemId,
     label: input.label,
-    vendor: input.vendor,
     quantity: input.quantity,
     unit: input.unit,
     pricePaid: input.pricePaid,
-    pricePerUnit: pricePerUnit(input.pricePaid, input.quantity),
+    marketId: input.marketId,
+    marketName: input.marketName,
+    variant: input.variant,
+    baseUnit,
+    pricePerBaseUnit: pricePerBaseUnit(input.pricePaid, input.quantity, input.unit),
+    category: input.category,
     tripDate,
     uid,
     addedAt: Date.now(),
-    category: input.category,
   };
   await setDoc(ref, tripItem);
   return tripItem;
@@ -105,10 +113,13 @@ export async function saveTrip(db: Firestore, uid: string, tripId: string): Prom
     batch.set(
       itemDoc(db, uid, ti.itemId),
       {
-        lastPrice: ti.pricePaid,
-        lastPriceUnit: ti.unit,
+        lastPricePerBaseUnit: ti.pricePerBaseUnit,
+        lastUnit: ti.unit,
+        lastBaseUnit: ti.baseUnit,
         lastPriceDate: ti.tripDate,
-        lastVendor: ti.vendor,
+        lastMarketId: ti.marketId,
+        lastMarketName: ti.marketName,
+        lastVariant: ti.variant,
         purchaseCount: increment(1),
       },
       { merge: true },
@@ -140,6 +151,32 @@ export async function priceHistory(db: Firestore, uid: string, itemId: string): 
   return snap.docs.map((d) => d.data() as TripItem);
 }
 
+export interface HistoryStream {
+  key: string;
+  marketName: string | null;
+  variant: string | null;
+  items: TripItem[]; // newest first
+}
+
+export function groupHistoryStreams(history: TripItem[]): HistoryStream[] {
+  const map = new Map<string, HistoryStream>();
+  for (const ti of history) {
+    const key = `${ti.marketId ?? ''}|${ti.variant ?? ''}`;
+    let s = map.get(key);
+    if (!s) { s = { key, marketName: ti.marketName, variant: ti.variant, items: [] }; map.set(key, s); }
+    s.items.push(ti);
+  }
+  return [...map.values()];
+}
+
+export async function lastContextFor(
+  db: Firestore, uid: string, itemId: string, marketId: string | null, variant: string | null,
+): Promise<TripItem | null> {
+  const history = await priceHistory(db, uid, itemId); // newest first
+  const match = history.find((h) => (marketId == null || h.marketId === marketId) && (variant == null || h.variant === variant));
+  return match ?? history[0] ?? null;
+}
+
 export async function getTrip(db: Firestore, uid: string, tripId: string): Promise<Trip | null> {
   const snap = await getDoc(tripDoc(db, uid, tripId));
   return snap.exists() ? (snap.data() as Trip) : null;
@@ -149,8 +186,9 @@ export interface TripItemPatch {
   quantity?: number | null;
   pricePaid?: number | null;
   unit?: Unit;
-  vendor?: string | null;
-  label?: string;
+  variant?: string | null;
+  marketId?: string | null;
+  marketName?: string | null;
 }
 
 export async function updateTripItem(
@@ -159,9 +197,8 @@ export async function updateTripItem(
   const ref = doc(tripItemsCol(db, uid, tripId), tripItemId);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error(`TripItem ${tripItemId} not found`);
-  const current = snap.data() as TripItem;
-  const next: TripItem = { ...current, ...patch };
-  next.pricePerUnit = pricePerUnit(next.pricePaid, next.quantity);
+  const next: TripItem = { ...(snap.data() as TripItem), ...patch };
+  next.pricePerBaseUnit = pricePerBaseUnit(next.pricePaid, next.quantity, next.unit);
   await setDoc(ref, next);
 }
 

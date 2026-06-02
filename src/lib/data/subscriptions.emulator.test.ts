@@ -19,7 +19,7 @@ function waitFor<T>(subscribe: (cb: (v: T) => void) => () => void, pred: (v: T) 
 
 describe('subscribeItems', () => {
   it('emits the library and updates on insert', async () => {
-    await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', defaultUnit: 'kg' });
+    await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg' });
     const items = await waitFor<Item[]>((cb) => subscribeItems(ctx.db, ctx.uid, cb), (v) => v.length === 1);
     expect(items[0].canonicalName).toBe('Liempo');
   });
@@ -27,12 +27,12 @@ describe('subscribeItems', () => {
 
 describe('subscribeRecentTrips', () => {
   it('emits only saved trips, newest first', async () => {
-    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', defaultUnit: 'kg' });
-    const t1 = await createDraftTrip(ctx.db, ctx.uid, { name: 'Old', storeName: 'C', date: '2026-05-01' });
-    await addTripItem(ctx.db, ctx.uid, t1.id, { itemId: item.id, label: 'L', quantity: 1, unit: 'kg', pricePaid: 100, vendor: null, category: 'karne' });
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg' });
+    const t1 = await createDraftTrip(ctx.db, ctx.uid, { name: 'Old', date: '2026-05-01' });
+    await addTripItem(ctx.db, ctx.uid, t1.id, { itemId: item.id, label: 'L', quantity: 1, unit: 'kg', pricePaid: 100, marketId: null, marketName: null, variant: null, category: 'karne' });
     await saveTrip(ctx.db, ctx.uid, t1.id);
-    const t2 = await createDraftTrip(ctx.db, ctx.uid, { name: 'New', storeName: 'C', date: '2026-06-01' });
-    await addTripItem(ctx.db, ctx.uid, t2.id, { itemId: item.id, label: 'L', quantity: 1, unit: 'kg', pricePaid: 200, vendor: null, category: 'karne' });
+    const t2 = await createDraftTrip(ctx.db, ctx.uid, { name: 'New', date: '2026-06-01' });
+    await addTripItem(ctx.db, ctx.uid, t2.id, { itemId: item.id, label: 'L', quantity: 1, unit: 'kg', pricePaid: 200, marketId: null, marketName: null, variant: null, category: 'karne' });
     await saveTrip(ctx.db, ctx.uid, t2.id);
     const trips = await waitFor<Trip[]>((cb) => subscribeRecentTrips(ctx.db, ctx.uid, cb), (v) => v.length === 2);
     expect(trips.map((t) => t.name)).toEqual(['New', 'Old']);
@@ -41,7 +41,7 @@ describe('subscribeRecentTrips', () => {
 
 describe('subscribeDraftTrips', () => {
   it('emits only drafts', async () => {
-    await createDraftTrip(ctx.db, ctx.uid, { name: 'Draft', storeName: 'C', date: '2026-06-01' });
+    await createDraftTrip(ctx.db, ctx.uid, { name: 'Draft', date: '2026-06-01' });
     const drafts = await waitFor<Trip[]>((cb) => subscribeDraftTrips(ctx.db, ctx.uid, cb), (v) => v.length === 1);
     expect(drafts[0].name).toBe('Draft');
   });
@@ -49,10 +49,10 @@ describe('subscribeDraftTrips', () => {
 
 describe('subscribeTripItems', () => {
   it('emits the live items of one trip in entry order', async () => {
-    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', defaultUnit: 'kg' });
-    const t = await createDraftTrip(ctx.db, ctx.uid, { name: 'P', storeName: 'C', date: '2026-06-01' });
-    await addTripItem(ctx.db, ctx.uid, t.id, { itemId: item.id, label: 'first', quantity: 1, unit: 'kg', pricePaid: 100, vendor: null, category: 'karne' });
-    await addTripItem(ctx.db, ctx.uid, t.id, { itemId: item.id, label: 'second', quantity: 1, unit: 'kg', pricePaid: 200, vendor: null, category: 'karne' });
+    const item = await createItem(ctx.db, ctx.uid, { canonicalName: 'Liempo', category: 'karne', form: 'timbang', defaultUnit: 'kg' });
+    const t = await createDraftTrip(ctx.db, ctx.uid, { name: 'P', date: '2026-06-01' });
+    await addTripItem(ctx.db, ctx.uid, t.id, { itemId: item.id, label: 'first', quantity: 1, unit: 'kg', pricePaid: 100, marketId: null, marketName: null, variant: null, category: 'karne' });
+    await addTripItem(ctx.db, ctx.uid, t.id, { itemId: item.id, label: 'second', quantity: 1, unit: 'kg', pricePaid: 200, marketId: null, marketName: null, variant: null, category: 'karne' });
     const items = await waitFor<TripItem[]>((cb) => subscribeTripItems(ctx.db, ctx.uid, t.id, cb), (v) => v.length === 2);
     expect(items.map((i) => i.label)).toEqual(['first', 'second']);
   });

@@ -1,10 +1,11 @@
 import { doc, getDoc, getDocs, setDoc, onSnapshot, type Firestore } from 'firebase/firestore';
 import { itemsCol, itemDoc } from './paths';
-import type { Item, Category, Unit } from '../domain/types';
+import type { Item, Category, Unit, Form } from '../domain/types';
 
 export interface NewItemInput {
   canonicalName: string;
   category: Category;
+  form: Form;
   defaultUnit: Unit;
   aliases?: string[];
 }
@@ -17,11 +18,15 @@ export async function createItem(db: Firestore, uid: string, input: NewItemInput
     nameLower: input.canonicalName.toLowerCase(),
     aliases: input.aliases ?? [],
     category: input.category,
+    form: input.form,
     defaultUnit: input.defaultUnit,
-    lastPrice: null,
-    lastPriceUnit: null,
+    lastPricePerBaseUnit: null,
+    lastUnit: null,
+    lastBaseUnit: null,
     lastPriceDate: null,
-    lastVendor: null,
+    lastMarketId: null,
+    lastMarketName: null,
+    lastVariant: null,
     purchaseCount: 0,
   };
   await setDoc(ref, item);

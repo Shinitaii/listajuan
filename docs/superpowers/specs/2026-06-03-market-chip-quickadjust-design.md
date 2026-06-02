@@ -26,28 +26,36 @@
 
 ## QuickAdjust control
 
-New `src/lib/ui/QuickAdjust.svelte`. Props: `value` (bindable number), `steps: number[]`, `stepLabels?: string[]` (display strings, e.g. "250g"), `min` (default 0), `format?` (how to render the central value). Behaviour:
+New `src/lib/ui/QuickAdjust.svelte`. Props: `value` (bindable number), `baseSteps: [number, number, number]` (the unscaled step triple), `kind: 'count' | 'weight' | 'volume' | 'price'` (drives chip labelling), `min` (default 0). Layout (one control):
 
-- **Central value** — large, tap-to-edit (a number input revealed on tap, or always an input styled large); clamped to ≥ `min`; supports decimals.
-- **Direction toggle** `＋` / `−`, default `＋`. Persistent mode. Colour state: **add = green accent**, **subtract = red/danger accent** applied to the toggle and the step chips, so the current direction is unmistakable.
-- **Step chips** — one per `steps` entry, labelled by `stepLabels` (fallback to the number). Tapping a chip applies `value = max(min, round2(value ± step))` in the current direction.
-- All tap targets ≥44px; no emoji; Filipino-friendly (the toggle uses ＋ / − glyphs; "Dagdag"/"Bawas" as aria-labels).
+```
+            [   2.5 kg   ]                  ← central value, tap to type any number
+| +/− | | 250g | | 500g | | 1kg | | ×2 |
+|     | |                         | ÷2 |
+```
 
-### Step sets
+- **Central value** — large, tap-to-edit; clamped to ≥ `min`; decimals allowed.
+- **Direction toggle** `＋` / `−`, default `＋`, persistent. **Colour state: add = green accent, subtract = red/danger accent** applied to the toggle + step chips, so the direction is unmistakable (mitigates "forgot I'm subtracting").
+- **Three step chips** = `baseSteps` × `scale` (a local multiplier, default 1). Tapping a chip applies `value = max(min, round2(value ± step))` in the current direction.
+- **`×2` / `÷2` buttons** multiply / divide `scale` by 2 — sliding the chip window along the doubling ladder (e.g. timbang `250g/500g/1kg → 500g/1kg/2kg → 1kg/2kg/4kg`, and back down to `125g/250g/500g`). Lets you reach a magnitude, then nudge finely (e.g. ÷2 back down to add 500g at 4kg).
+- **Chip labels** are derived from the scaled value by `kind`: `weight` shows `<1kg` as `g` else `kg`; `volume` shows `<1L` as `ml` else `L`; `price` shows `₱{n}`; `count` shows the bare number. So labels reformat as you scale.
+- All tap targets ≥44px; no emoji; aria-labels "Dagdag"/"Bawas" on the toggle, "Doblehin"/"Hatiin" on ×2/÷2.
 
-| Field | Form | steps (value) | stepLabels |
+### Base step triples
+
+| Field | kind | baseSteps | example chips at scale 1 |
 |---|---|---|---|
-| Dami | bilang | 1, 2, 5 | 1, 2, 5 |
-| Dami | timbang (base kg) | 0.25, 0.5, 1 | 250g, 500g, 1kg |
-| Dami | sukat (base L) | 0.25, 0.5, 1 | 250ml, 500ml, 1L |
-| Presyo | — | 25, 50, 100 | ₱25, ₱50, ₱100 |
+| Dami · bilang | count | [1, 2, 5] | 1 · 2 · 5 |
+| Dami · timbang | weight | [0.25, 0.5, 1] | 250g · 500g · 1kg |
+| Dami · sukat | volume | [0.25, 0.5, 1] | 250ml · 500ml · 1L |
+| Presyo | price | [25, 50, 100] | ₱25 · ₱50 · ₱100 |
 
-Defaults on open: Dami value as today (1 for bilang; for timbang/sukat keep current default of 1 or empty per existing behaviour); Presyo unchanged (prefill logic from the markets-forms round still applies — QuickAdjust just augments how you nudge it).
+`scale` resets to 1 each time the control mounts. Defaults on open: Dami value 1 (bilang) / as-is (timbang/sukat); Presyo prefill from the markets-forms round still applies — QuickAdjust just augments nudging.
 
 ### Wiring
 
-- `QtyField.svelte` becomes a thin wrapper: pick `steps`/`stepLabels` by `form`, render `<QuickAdjust>`. (Replaces the bilang Stepper + bare number field.) `Stepper.svelte` may be removed if no longer used elsewhere.
-- AddItem's price field becomes `<QuickAdjust value={price} steps={[25,50,100]} stepLabels={['₱25','₱50','₱100']}>` — keep the existing prefill `$effect` (it sets `price`; QuickAdjust binds the same `price`) and the live per-base-unit readout.
+- `QtyField.svelte` becomes a thin wrapper: pick `baseSteps`/`kind` by `form` (`bilang`→count [1,2,5]; `timbang`→weight [0.25,0.5,1]; `sukat`→volume [0.25,0.5,1]), render `<QuickAdjust bind:value>`. (Replaces the bilang Stepper + bare number field.) `Stepper.svelte` may be removed if no longer used elsewhere.
+- AddItem's price field becomes `<QuickAdjust bind:value={price} baseSteps={[25,50,100]} kind="price" />` — keep the existing prefill `$effect` (it sets `price`; QuickAdjust binds the same `price`) and the live per-base-unit readout.
 
 ## Out of scope (still parked)
 

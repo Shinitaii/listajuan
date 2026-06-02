@@ -13,7 +13,7 @@
 
   let { params } = $props<{ params: { tripId: string } }>();
   const uid = session.uid!;
-  const tripId = params.tripId;
+  const tripId = $derived(params.tripId); // reactive so the effect re-subscribes if the route id changes
 
   let trip = $state<Trip | null>(null);
   let items = $state<TripItem[]>([]);

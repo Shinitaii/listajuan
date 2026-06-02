@@ -3,7 +3,7 @@
   import { db } from '../lib/data/firebase';
   import { createItem, getItem } from '../lib/data/items';
   import { lastContextFor, type NewTripItemInput } from '../lib/data/trips';
-  import { unitsFor, baseUnitFor, baseUnitLabel, pricePerBaseUnit, unitFactor } from '../lib/domain/units';
+  import { unitsFor, baseUnitFor, baseUnitLabel, pricePerBaseUnit, unitFactor, formForUnit } from '../lib/domain/units';
   import ItemPicker from './ItemPicker.svelte';
   import FormPicker from '../lib/ui/FormPicker.svelte';
   import CategoryPicker from '../lib/ui/CategoryPicker.svelte';
@@ -57,7 +57,16 @@
       variant = existing.variant ?? '';
       price = existing.pricePaid;
       priceTouched = true; // don't auto-prefill over the existing price
-      getItem(db, uid, existing.itemId).then((i) => { item = i; });
+      // Edit mode needs the item only for its form/name. If the library item was
+      // deleted, synthesize a fallback from the line itself so the editor never hangs.
+      getItem(db, uid, existing.itemId).then((i) => {
+        item = i ?? {
+          id: existing!.itemId, canonicalName: existing!.label, nameLower: existing!.label.toLowerCase(),
+          aliases: [], category: existing!.category, form: formForUnit(existing!.unit),
+          defaultUnit: existing!.unit, lastPricePerBaseUnit: null, lastUnit: null, lastBaseUnit: null,
+          lastPriceDate: null, lastMarketId: null, lastMarketName: null, lastVariant: null, purchaseCount: 0,
+        };
+      });
     }
   });
 
@@ -85,7 +94,10 @@
     lastPpu = null; priceTouched = false; price = null; // brand-new item: no history to prefill
   }
 
-  function pickMarket(m: Market) { marketId = m.id; marketName = m.name; pickingMarket = false; onMarketChange?.(m.id, m.name); }
+  function pickMarket(m: Market) {
+    marketId = m.id; marketName = m.name; pickingMarket = false;
+    if (!existing) onMarketChange?.(m.id, m.name); // sticky trip-default only when adding, not editing a line
+  }
 
   function save() {
     if (!item) return;

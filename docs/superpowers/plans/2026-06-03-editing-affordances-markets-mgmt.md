@@ -552,3 +552,14 @@ async function newTrip() {
 - **Google sign-in** is the next round (Settings page already hosts the future "I-link ang Google account"). Web flow first (emulator), then native Capacitor plugin once Android/iOS projects exist.
 - Recipes/saved lists, recommendations/ML, i18n still parked.
 - `cleared quantity → null` (from the prior round) still applies to AddItem; consider requiring qty before save in a polish pass.
+
+### Final-review findings
+**Fixed this round:**
+- Deleting a library item no longer makes its existing trip lines uneditable — AddItem edit-mode synthesizes a fallback item from the line (via `formForUnit`) instead of hanging on `getItem` returning null.
+- `Trip.svelte` `tripId` is now `$derived(params.tripId)` so the screen re-fetches/re-subscribes if the route id ever changes on a reused instance.
+- Editing a line's market no longer rewrites the trip's default market (the sticky `onMarketChange` fires only in add mode).
+
+**Deferred (carry-forward):**
+- **Draft lines count toward `purchaseCount` and drive an item's `lastPrice*` before "Tapos."** Because `recomputeItem` uses the status-less `priceHistory` collectionGroup, an in-progress/abandoned draft inflates the item's "N biyahe" and shows its tentative price as the item's last price — inconsistent with analytics ignoring drafts. Settling this needs trip `status` denormalized onto each tripItem so recompute can filter to saved trips. Confirm intended behaviour next round.
+- **Per-mutation recompute isn't serialized/transactional** (full read-modify-write `setDoc`). Two fast mutations on the same item could clobber `lastPrice`. Low risk for one-handed single-user; revisit with a queue/transaction or `updateDoc` field-merge if it ever bites.
+- **Deleting a market** leaves tripItems with a dangling `marketId` (they keep `marketName` for display, so it's cosmetic only).

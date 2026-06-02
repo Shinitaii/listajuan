@@ -37,6 +37,10 @@ export function unitFactor(unit: Unit): number {
   return UNIT_TABLE[unit].factor;
 }
 
+export function formForUnit(unit: Unit): Form {
+  return UNIT_TABLE[unit].form;
+}
+
 export function pricePerBaseUnit(
   pricePaid: number | null,
   quantity: number | null,

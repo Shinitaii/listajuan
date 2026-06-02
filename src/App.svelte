@@ -4,6 +4,7 @@
   import { session, startSession } from './lib/state/session.svelte';
   import { startLibrary } from './lib/state/library.svelte';
   import { startTrips } from './lib/state/trips.svelte';
+  import { startMarkets } from './lib/state/markets.svelte';
   import TabBar from './lib/ui/TabBar.svelte';
   import Home from './routes/Home.svelte';
   import Biyahe from './routes/Biyahe.svelte';
@@ -25,7 +26,7 @@
 
   onMount(async () => {
     await startSession();
-    if (session.uid) { startLibrary(session.uid); startTrips(session.uid); }
+    if (session.uid) { startLibrary(session.uid); startTrips(session.uid); startMarkets(session.uid); }
   });
 
   // hide the tab bar on the focused logging flow (full-screen stepper)

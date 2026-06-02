@@ -6,6 +6,7 @@
   import { tripTotal } from '../lib/domain/calc';
   import { baseUnitLabel } from '../lib/domain/units';
   import AddItem from './AddItem.svelte';
+  import MarketPicker from '../lib/ui/MarketPicker.svelte';
   import IconButton from '../lib/ui/IconButton.svelte';
   import ConfirmDialog from '../lib/ui/ConfirmDialog.svelte';
   import { Pencil, Trash2, ChevronLeft } from 'lucide-svelte';
@@ -20,11 +21,11 @@
   let mode = $state<'view' | 'add' | 'edit'>('view');
   let editing = $state<TripItem | null>(null);
   let confirmDelete = $state(false);
+  let pickingMarket = $state(false);
 
   $effect(() => {
     getTrip(db, uid, tripId).then((t) => {
       trip = t;
-      if (t && items.length === 0) mode = 'add'; // brand-new/empty → start adding
     });
     const unsub = subscribeTripItems(db, uid, tripId, (i) => { items = i; });
     return () => unsub();
@@ -40,6 +41,11 @@
     editing = null; mode = 'view';
   }
   function onMarketChange(id: string | null, name: string | null) { setTripMarket(db, uid, tripId, id, name); }
+  async function pickTripMarket(m: { id: string; name: string }) {
+    await setTripMarket(db, uid, tripId, m.id, m.name);
+    if (trip) trip = { ...trip, defaultMarketId: m.id, defaultMarketName: m.name };
+    pickingMarket = false;
+  }
   async function remove(ti: TripItem) { await removeTripItem(db, uid, tripId, ti.id); }
   function startEdit(ti: TripItem) { editing = ti; mode = 'edit'; }
   async function finish() { await saveTrip(db, uid, tripId); push('/'); }
@@ -52,8 +58,13 @@
     <div class="sp"></div>
   </header>
 
+  <button class="mktchip" onclick={() => (pickingMarket = !pickingMarket)}>Tindahan: {trip?.defaultMarketName ?? 'Pumili ng tindahan'} ▾</button>
+  {#if pickingMarket}
+    <MarketPicker onPick={pickTripMarket} />
+  {/if}
+
   {#if mode === 'add'}
-    <AddItem defaultMarketId={trip?.defaultMarketId ?? null} defaultMarketName={trip?.defaultMarketName ?? null} {onMarketChange} onSave={onAdd} />
+    <AddItem defaultMarketId={trip?.defaultMarketId ?? null} defaultMarketName={trip?.defaultMarketName ?? null} onSave={onAdd} />
     {#if items.length}<button class="link" onclick={() => (mode = 'view')}>Bumalik sa listahan</button>{/if}
   {:else if mode === 'edit' && editing}
     <AddItem existing={editing} defaultMarketId={editing.marketId} defaultMarketName={editing.marketName} {onMarketChange} onSave={onEditSave} />
@@ -91,6 +102,7 @@
   .screen { padding: var(--sp-screen); padding-bottom: 90px; }
   header { display: flex; align-items: center; gap: 8px; }
   .h { font-weight: 700; font-size: 17px; } .sp { flex: 1; }
+  .mktchip { width: 100%; text-align: left; margin-top: 10px; border: 2px solid var(--c-ink); border-radius: var(--radius); padding: 12px; background: var(--c-bg); font-weight: 700; }
   .card { background: var(--c-surface); border-radius: var(--radius); padding: 16px; margin-top: 8px; }
   .lbl { color: var(--c-ink-soft); font-size: var(--fs-label); }
   .hero { font-size: var(--fs-hero); font-weight: 800; }

@@ -9,6 +9,7 @@
   import CategoryPicker from '../lib/ui/CategoryPicker.svelte';
   import MarketPicker from '../lib/ui/MarketPicker.svelte';
   import QtyField from '../lib/ui/QtyField.svelte';
+  import QuickAdjust from '../lib/ui/QuickAdjust.svelte';
   import AppButton from '../lib/ui/AppButton.svelte';
   import type { Item, Unit, Form, Category, Market, TripItem } from '../lib/domain/types';
 
@@ -121,11 +122,13 @@
   {:else}
     <h2>{item.canonicalName}</h2>
 
-    <p class="lbl">Saang tindahan?</p>
-    {#if pickingMarket}
-      <MarketPicker onPick={pickMarket} />
-    {:else}
-      <button class="market" onclick={() => (pickingMarket = true)}>{marketName ?? 'Pumili ng tindahan'} ▾</button>
+    {#if existing}
+      <p class="lbl">Saang tindahan?</p>
+      {#if pickingMarket}
+        <MarketPicker onPick={pickMarket} />
+      {:else}
+        <button class="market" onclick={() => (pickingMarket = true)}>{marketName ?? 'Pumili ng tindahan'} ▾</button>
+      {/if}
     {/if}
 
     <p class="lbl">Dami</p>
@@ -138,7 +141,7 @@
     <input class="variant" bind:value={variant} placeholder="walang laman = ordinaryo" />
 
     <p class="lbl">Presyo (kabuuan)</p>
-    <input class="price" type="number" inputmode="decimal" bind:value={price} oninput={() => (priceTouched = true)} placeholder="₱" />
+    <QuickAdjust bind:value={price} baseSteps={[25, 50, 100]} kind="price" min={0} ontouch={() => (priceTouched = true)} />
     {#if ppu != null}<p class="readout">= ₱{Math.round(ppu).toLocaleString('en-PH')} / {baseUnitLabel(baseUnit)}</p>{/if}
 
     <AppButton onclick={save}>I-save ang item</AppButton>
@@ -154,6 +157,5 @@
   .chip.on { background: var(--c-accent); color: #fff; border-color: var(--c-accent); }
   .market { text-align: left; border: 2px solid var(--c-ink); border-radius: var(--radius); padding: 12px; background: var(--c-bg); font-weight: 700; }
   .variant { border: 2px solid var(--c-ink); border-radius: var(--radius); padding: 10px; font-size: var(--fs-body); }
-  .price { font-size: var(--fs-hero); text-align: center; border: none; border-bottom: 3px solid var(--c-ink); outline: none; }
   .readout { font-size: var(--fs-price); font-weight: 700; color: var(--c-accent); text-align: center; }
 </style>

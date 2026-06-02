@@ -2,7 +2,7 @@
   import { applyStep, scaledSteps } from '../domain/quickadjust';
 
   let { value = $bindable(0), baseSteps, kind, min = 0, ontouch } =
-    $props<{ value: number; baseSteps: [number, number, number]; kind: 'count' | 'weight' | 'volume' | 'price'; min?: number; ontouch?: () => void }>();
+    $props<{ value: number | null; baseSteps: [number, number, number]; kind: 'count' | 'weight' | 'volume' | 'price'; min?: number; ontouch?: () => void }>();
 
   let scale = $state(1);
   let activeIndex = $state(0);
@@ -21,14 +21,14 @@
     return n < 1 ? `${Math.round(n * 1000)}${sub}` : `${+n.toFixed(2)}${base}`;
   }
 
-  const add = () => { value = applyStep(value, activeStep, 'add', min); touch(); };
-  const sub = () => { value = applyStep(value, activeStep, 'sub', min); touch(); };
+  const add = () => { value = applyStep(value ?? min, activeStep, 'add', min); touch(); };
+  const sub = () => { value = applyStep(value ?? min, activeStep, 'sub', min); touch(); };
   const selectChip = (i: number) => { activeIndex = i; touch(); };
 </script>
 
 <div class="qa">
   <input class="val" type="number" inputmode="decimal" bind:value
-    onchange={() => { if (value < min || Number.isNaN(value)) value = min; touch(); }} />
+    onchange={() => { if (value == null || value < min || Number.isNaN(value)) value = min; touch(); }} />
 
   <div class="row">
     <div class="chips">

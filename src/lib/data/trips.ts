@@ -4,7 +4,7 @@ import {
 } from 'firebase/firestore';
 import { tripsCol, tripDoc, tripItemsCol, itemDoc } from './paths';
 import { pricePerUnit, tripTotal, monthRange } from '../domain/calc';
-import type { Trip, TripItem, Unit } from '../domain/types';
+import type { Trip, TripItem, Unit, Category } from '../domain/types';
 
 export interface NewTripInput {
   name: string;
@@ -38,6 +38,7 @@ export interface NewTripItemInput {
   unit: Unit;
   pricePaid: number | null;
   vendor: string | null;
+  category: Category;
 }
 
 export async function addTripItem(
@@ -60,6 +61,7 @@ export async function addTripItem(
     tripDate,
     uid,
     addedAt: Date.now(),
+    category: input.category,
   };
   await setDoc(ref, tripItem);
   return tripItem;
@@ -187,6 +189,30 @@ export async function monthlyTotal(db: Firestore, uid: string, year: number, mon
   );
   const snap = await getDocs(q);
   return snap.docs.reduce((sum, d) => sum + ((d.data() as Trip).total ?? 0), 0);
+}
+
+export type CategoryTotals = Partial<Record<Category, number>>;
+
+export async function monthlyByCategory(
+  db: Firestore, uid: string, year: number, month: number,
+): Promise<CategoryTotals> {
+  const { startISO, endISO } = monthRange(year, month);
+  const tripsQ = query(
+    tripsCol(db, uid),
+    where('status', '==', 'saved'),
+    where('date', '>=', startISO),
+    where('date', '<', endISO),
+  );
+  const tripsSnap = await getDocs(tripsQ);
+  const totals: CategoryTotals = {};
+  for (const tripSnap of tripsSnap.docs) {
+    const items = await getTripItems(db, uid, tripSnap.id);
+    for (const ti of items) {
+      if (ti.pricePaid == null) continue;
+      totals[ti.category] = (totals[ti.category] ?? 0) + ti.pricePaid;
+    }
+  }
+  return totals;
 }
 
 export function subscribeRecentTrips(

@@ -13,7 +13,10 @@
 ## Conventions
 
 - Filipino-first, no emoji (lucide icons). Offline-first; no write spinners. Only delete-trip and delete-item/market confirm.
-- Type gate: `npm run check` (bare `tsc` checks nothing here). Emulator tests serial; **kill stale java first**: `powershell -Command "Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force"`. A lone `subscribeTripItems` timeout that passes on isolated re-run is the known flake.
+- Type gate: `npm run check` (bare `tsc` checks nothing here). A lone `subscribeTripItems` timeout that passes on isolated re-run is the known flake.
+- **Emulator shutdown is NOT automatic** — the JVM lingers after `firebase emulators:exec`. So **kill java BEFORE *and* AFTER every `npm run test:emulator`**, non-interactively (no prompt):
+  `powershell -Command "Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force"`
+  Use exactly this form (`-Force` + `-ErrorAction SilentlyContinue`) — it never asks for confirmation. Do the post-run kill even when tests pass, so the emulator never stays up or blocks the next run's port 8080.
 
 ## File Structure
 

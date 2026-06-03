@@ -22,6 +22,7 @@ export interface Item {
   canonicalName: string;
   nameLower: string;
   aliases: string[];
+  barcodes: string[];
   category: Category;
   form: Form;
   defaultUnit: Unit;

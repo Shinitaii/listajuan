@@ -1,7 +1,11 @@
 <script lang="ts">
   import { session } from '../lib/state/session.svelte';
   import { db } from '../lib/data/firebase';
-  import { createItem, getItem } from '../lib/data/items';
+  import { createItem, getItem, findItemByBarcode, attachBarcode } from '../lib/data/items';
+  import { lookupProductName } from '../lib/scan/lookup';
+  import { resolveScannedCode } from '../lib/scan/resolveScan';
+  import { isScanAvailable, scanBarcode } from '../lib/scan/capture';
+  import { ScanBarcode } from 'lucide-svelte';
   import { lastContextFor, type NewTripItemInput } from '../lib/data/trips';
   import { unitsFor, baseUnitFor, baseUnitLabel, pricePerBaseUnit, unitFactor, formForUnit } from '../lib/domain/units';
   import ItemPicker from './ItemPicker.svelte';
@@ -28,6 +32,10 @@
   let newName = $state('');
   let newForm = $state<Form | null>(null);
   let newCategory = $state<Category | null>(null);
+  // barcode scan: availability (native only) + the code awaiting attachment to the chosen item
+  let scanAvailable = $state(false);
+  let pendingScanCode = $state<string | null>(null);
+  isScanAvailable().then((v) => (scanAvailable = v));
 
   let marketId = $state<string | null>(defaultMarketId);
   let marketName = $state<string | null>(defaultMarketName);
@@ -63,7 +71,7 @@
       getItem(db, uid, existing.itemId).then((i) => {
         item = i ?? {
           id: existing!.itemId, canonicalName: existing!.label, nameLower: existing!.label.toLowerCase(),
-          aliases: [], category: existing!.category, form: formForUnit(existing!.unit),
+          aliases: [], barcodes: [], category: existing!.category, form: formForUnit(existing!.unit),
           defaultUnit: existing!.unit, lastPricePerBaseUnit: null, lastUnit: null, lastBaseUnit: null,
           lastPriceDate: null, lastMarketId: null, lastMarketName: null, lastVariant: null, purchaseCount: 0,
         };
@@ -82,8 +90,31 @@
     if ('isNew' in r) { newName = r.name; return; } // show the form/category pickers
     item = r; unit = r.defaultUnit; variant = r.lastVariant ?? '';
     priceTouched = false; price = null;
+    // A manual-resolved scan teaches the library: attach the code to the chosen item.
+    if (pendingScanCode && !(r.barcodes ?? []).includes(pendingScanCode)) {
+      await attachBarcode(db, uid, r.id, pendingScanCode);
+    }
+    pendingScanCode = null;
     const ctx = await lastContextFor(db, uid, r.id, marketId, variant || null);
     lastPpu = ctx?.pricePerBaseUnit ?? null; // the $effect seeds the estimate
+  }
+
+  // Scan → library-first match, else cold-start suggestion, else manual (code preserved).
+  async function onScan() {
+    const code = await scanBarcode();
+    if (!code) return;
+    const outcome = await resolveScannedCode(code, {
+      findItemByBarcode: (c) => findItemByBarcode(db, uid, c),
+      lookupProductName: (c) => lookupProductName(c),
+      isOnline: () => navigator.onLine,
+    });
+    if (!outcome) return;
+    if (outcome.kind === 'library') {
+      await pick(outcome.item);
+    } else {
+      pendingScanCode = outcome.code; // attached when the user picks/creates the item
+      if (outcome.kind === 'suggested') newName = outcome.name; // drops into the new-item form
+    }
   }
 
   async function confirmNewItem() {
@@ -91,6 +122,7 @@
     const created = await createItem(db, uid, {
       canonicalName: newName.trim(), category: newCategory, form: newForm, defaultUnit: unitsFor(newForm)[0],
     });
+    if (pendingScanCode) { await attachBarcode(db, uid, created.id, pendingScanCode); pendingScanCode = null; }
     item = created; unit = created.defaultUnit; newName = '';
     lastPpu = null; priceTouched = false; price = null; // brand-new item: no history to prefill
   }
@@ -113,6 +145,9 @@
   {#if existing && !item}
     <p class="lbl">Naglo-load…</p>
   {:else if !item && !newName}
+    {#if scanAvailable}
+      <button class="scan" onclick={onScan}><ScanBarcode size={20} /> I-scan ang barcode</button>
+    {/if}
     <ItemPicker onPick={pick} />
   {:else if !item}
     <h2>Bagong item: "{newName}"</h2>
@@ -158,4 +193,7 @@
   .market { text-align: left; border: 2px solid var(--c-ink); border-radius: var(--radius); padding: 12px; background: var(--c-bg); font-weight: 700; }
   .variant { border: 2px solid var(--c-ink); border-radius: var(--radius); padding: 10px; font-size: var(--fs-body); }
   .readout { font-size: var(--fs-price); font-weight: 700; color: var(--c-accent); text-align: center; }
+  .scan { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px;
+    border: 2px solid var(--c-accent); color: var(--c-accent); border-radius: var(--radius);
+    padding: 10px; background: var(--c-bg); font-weight: 700; font-size: var(--fs-body); }
 </style>

@@ -1,0 +1,9 @@
+
+ RUN  v4.1.8 C:/Users/rgvil/coding-projects/listahan
+
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  07:41:22
+   Duration  1.15s (transform 185ms, setup 0ms, import 257ms, tests 17ms, environment 0ms)
+

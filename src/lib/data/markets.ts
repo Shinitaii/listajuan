@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, onSnapshot, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, onSnapshot, type Firestore } from 'firebase/firestore';
 import { marketsCol, marketDoc } from './paths';
 import type { Market, MarketType } from '../domain/types';
 
@@ -18,4 +18,17 @@ export async function getMarket(db: Firestore, uid: string, marketId: string): P
 
 export function subscribeMarkets(db: Firestore, uid: string, cb: (markets: Market[]) => void): () => void {
   return onSnapshot(marketsCol(db, uid), (snap) => cb(snap.docs.map((d) => d.data() as Market)));
+}
+
+export async function updateMarket(db: Firestore, uid: string, marketId: string, patch: { name?: string; type?: MarketType }): Promise<void> {
+  const ref = marketDoc(db, uid, marketId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error(`Market ${marketId} not found`);
+  const cur = snap.data() as Market;
+  const name = patch.name ?? cur.name;
+  await setDoc(ref, { ...cur, name, nameLower: name.toLowerCase(), type: patch.type ?? cur.type });
+}
+
+export async function deleteMarket(db: Firestore, uid: string, marketId: string): Promise<void> {
+  await deleteDoc(marketDoc(db, uid, marketId));
 }

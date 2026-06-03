@@ -1,19 +1,26 @@
 <script lang="ts">
   import { session } from '../lib/state/session.svelte';
   import { db } from '../lib/data/firebase';
-  import { createItem } from '../lib/data/items';
+  import { createItem, getItem } from '../lib/data/items';
   import { lastContextFor, type NewTripItemInput } from '../lib/data/trips';
-  import { unitsFor, baseUnitFor, baseUnitLabel, pricePerBaseUnit, unitFactor } from '../lib/domain/units';
+  import { unitsFor, baseUnitFor, baseUnitLabel, pricePerBaseUnit, unitFactor, formForUnit } from '../lib/domain/units';
   import ItemPicker from './ItemPicker.svelte';
   import FormPicker from '../lib/ui/FormPicker.svelte';
   import CategoryPicker from '../lib/ui/CategoryPicker.svelte';
   import MarketPicker from '../lib/ui/MarketPicker.svelte';
   import QtyField from '../lib/ui/QtyField.svelte';
+  import QuickAdjust from '../lib/ui/QuickAdjust.svelte';
   import AppButton from '../lib/ui/AppButton.svelte';
-  import type { Item, Unit, Form, Category, Market } from '../lib/domain/types';
+  import type { Item, Unit, Form, Category, Market, TripItem } from '../lib/domain/types';
 
-  let { defaultMarketId = null, defaultMarketName = null, onSave } =
-    $props<{ defaultMarketId?: string | null; defaultMarketName?: string | null; onSave: (i: NewTripItemInput) => void }>();
+  let { defaultMarketId = null, defaultMarketName = null, existing = null, onMarketChange, onSave } =
+    $props<{
+      defaultMarketId?: string | null;
+      defaultMarketName?: string | null;
+      existing?: TripItem | null;
+      onMarketChange?: (id: string | null, name: string | null) => void;
+      onSave: (i: NewTripItemInput) => void;
+    }>();
   const uid = session.uid!;
 
   let item = $state<Item | null>(null);
@@ -39,6 +46,31 @@
   const baseUnit = $derived(item ? baseUnitFor(item.form) : 'piece');
   const ppu = $derived(pricePerBaseUnit(price, qty, unit));
 
+  // Edit mode: load the fixed item + seed fields from `existing` once.
+  let initialized = $state(false);
+  $effect(() => {
+    if (existing && !initialized) {
+      initialized = true;
+      marketId = existing.marketId;
+      marketName = existing.marketName;
+      qty = existing.quantity ?? 1;
+      unit = existing.unit;
+      variant = existing.variant ?? '';
+      price = existing.pricePaid;
+      priceTouched = true; // don't auto-prefill over the existing price
+      // Edit mode needs the item only for its form/name. If the library item was
+      // deleted, synthesize a fallback from the line itself so the editor never hangs.
+      getItem(db, uid, existing.itemId).then((i) => {
+        item = i ?? {
+          id: existing!.itemId, canonicalName: existing!.label, nameLower: existing!.label.toLowerCase(),
+          aliases: [], category: existing!.category, form: formForUnit(existing!.unit),
+          defaultUnit: existing!.unit, lastPricePerBaseUnit: null, lastUnit: null, lastBaseUnit: null,
+          lastPriceDate: null, lastMarketId: null, lastMarketName: null, lastVariant: null, purchaseCount: 0,
+        };
+      });
+    }
+  });
+
   // Keep the prefilled total proportional to qty/unit until the user overrides it.
   $effect(() => {
     if (lastPpu != null && !priceTouched && qty != null) {
@@ -63,7 +95,10 @@
     lastPpu = null; priceTouched = false; price = null; // brand-new item: no history to prefill
   }
 
-  function pickMarket(m: Market) { marketId = m.id; marketName = m.name; pickingMarket = false; }
+  function pickMarket(m: Market) {
+    marketId = m.id; marketName = m.name; pickingMarket = false;
+    if (!existing) onMarketChange?.(m.id, m.name); // sticky trip-default only when adding, not editing a line
+  }
 
   function save() {
     if (!item) return;
@@ -75,7 +110,9 @@
 </script>
 
 <div class="add">
-  {#if !item && !newName}
+  {#if existing && !item}
+    <p class="lbl">Naglo-load…</p>
+  {:else if !item && !newName}
     <ItemPicker onPick={pick} />
   {:else if !item}
     <h2>Bagong item: "{newName}"</h2>
@@ -85,11 +122,13 @@
   {:else}
     <h2>{item.canonicalName}</h2>
 
-    <p class="lbl">Saang tindahan?</p>
-    {#if pickingMarket}
-      <MarketPicker onPick={pickMarket} />
-    {:else}
-      <button class="market" onclick={() => (pickingMarket = true)}>{marketName ?? 'Pumili ng tindahan'} ▾</button>
+    {#if existing}
+      <p class="lbl">Saang tindahan?</p>
+      {#if pickingMarket}
+        <MarketPicker onPick={pickMarket} />
+      {:else}
+        <button class="market" onclick={() => (pickingMarket = true)}>{marketName ?? 'Pumili ng tindahan'} ▾</button>
+      {/if}
     {/if}
 
     <p class="lbl">Dami</p>
@@ -102,7 +141,7 @@
     <input class="variant" bind:value={variant} placeholder="walang laman = ordinaryo" />
 
     <p class="lbl">Presyo (kabuuan)</p>
-    <input class="price" type="number" inputmode="decimal" bind:value={price} oninput={() => (priceTouched = true)} placeholder="₱" />
+    <QuickAdjust bind:value={price} baseSteps={[25, 50, 100]} kind="price" min={0} ontouch={() => (priceTouched = true)} />
     {#if ppu != null}<p class="readout">= ₱{Math.round(ppu).toLocaleString('en-PH')} / {baseUnitLabel(baseUnit)}</p>{/if}
 
     <AppButton onclick={save}>I-save ang item</AppButton>
@@ -118,6 +157,5 @@
   .chip.on { background: var(--c-accent); color: #fff; border-color: var(--c-accent); }
   .market { text-align: left; border: 2px solid var(--c-ink); border-radius: var(--radius); padding: 12px; background: var(--c-bg); font-weight: 700; }
   .variant { border: 2px solid var(--c-ink); border-radius: var(--radius); padding: 10px; font-size: var(--fs-body); }
-  .price { font-size: var(--fs-hero); text-align: center; border: none; border-bottom: 3px solid var(--c-ink); outline: none; }
   .readout { font-size: var(--fs-price); font-weight: 700; color: var(--c-accent); text-align: center; }
 </style>

@@ -1,13 +1,14 @@
 <script lang="ts">
-  import Stepper from './Stepper.svelte';
+  import QuickAdjust from './QuickAdjust.svelte';
   import type { Form } from '../domain/types';
-  let { form, value = $bindable(1) } = $props<{ form: Form; value: number }>();
+  let { form, value = $bindable(1) }: { form: Form; value: number } = $props();
+
+  const config = {
+    bilang: { baseSteps: [1, 2, 5] as [number, number, number], kind: 'count' as const },
+    timbang: { baseSteps: [0.25, 0.5, 1] as [number, number, number], kind: 'weight' as const },
+    sukat: { baseSteps: [0.25, 0.5, 1] as [number, number, number], kind: 'volume' as const },
+  };
+  const c = $derived(config[form]);
 </script>
-{#if form === 'bilang'}
-  <Stepper bind:value step={1} min={0} />
-{:else}
-  <input class="num" type="number" inputmode="decimal" step="0.01" min="0" bind:value placeholder="Dami" />
-{/if}
-<style>
-  .num { width: 100%; font-size: var(--fs-hero); text-align: center; border: none; border-bottom: 3px solid var(--c-ink); outline: none; }
-</style>
+
+<QuickAdjust bind:value baseSteps={c.baseSteps} kind={c.kind} min={0} />

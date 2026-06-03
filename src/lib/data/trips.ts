@@ -1,17 +1,18 @@
 import {
-  doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch, increment,
+  doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch,
   query, collectionGroup, where, orderBy, limit, onSnapshot, type Firestore,
 } from 'firebase/firestore';
 import { tripsCol, tripDoc, tripItemsCol, itemDoc } from './paths';
 import { tripTotal, monthRange } from '../domain/calc';
 import { baseUnitFor, pricePerBaseUnit } from '../domain/units';
 import { getItem } from './items';
-import type { Trip, TripItem, Unit, Category } from '../domain/types';
+import type { Trip, TripItem, Unit, Category, Item } from '../domain/types';
 
 export interface NewTripInput {
   name: string;
   date: string; // ISO
   defaultMarketId?: string | null;
+  defaultMarketName?: string | null;
   notes?: string | null;
 }
 
@@ -22,6 +23,7 @@ export async function createDraftTrip(db: Firestore, uid: string, input: NewTrip
     name: input.name,
     date: input.date,
     defaultMarketId: input.defaultMarketId ?? null,
+    defaultMarketName: input.defaultMarketName ?? null,
     notes: input.notes ?? null,
     status: 'draft',
     total: 0,
@@ -57,6 +59,7 @@ export async function addTripItem(
   const ref = doc(tripItemsCol(db, uid, tripId));
   const tripItem: TripItem = {
     id: ref.id,
+    tripId,
     itemId: input.itemId,
     label: input.label,
     quantity: input.quantity,
@@ -73,7 +76,62 @@ export async function addTripItem(
     addedAt: Date.now(),
   };
   await setDoc(ref, tripItem);
+  await recomputeTrip(db, uid, tripId);
+  await recomputeItem(db, uid, input.itemId);
   return tripItem;
+}
+
+export interface MarketGroup { marketId: string | null; marketName: string | null; items: TripItem[]; subtotal: number; }
+export function groupByMarket(items: TripItem[]): MarketGroup[] {
+  const map = new Map<string, MarketGroup>();
+  for (const ti of items) {
+    const key = ti.marketId ?? '__none__';
+    let g = map.get(key);
+    if (!g) { g = { marketId: ti.marketId, marketName: ti.marketName, items: [], subtotal: 0 }; map.set(key, g); }
+    g.items.push(ti);
+    g.subtotal += ti.pricePaid ?? 0;
+  }
+  return [...map.values()];
+}
+
+export async function recomputeTrip(db: Firestore, uid: string, tripId: string): Promise<void> {
+  const ref = tripDoc(db, uid, tripId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const items = await getTripItems(db, uid, tripId);
+  const total = tripTotal(items);
+  const itemCount = items.length;
+  const marketNames = [...new Set(items.map((i) => i.marketName).filter((n): n is string => !!n))];
+  await setDoc(ref, { ...(snap.data() as Trip), total, itemCount, marketNames });
+}
+
+export async function recomputeItem(db: Firestore, uid: string, itemId: string): Promise<void> {
+  const history = await priceHistory(db, uid, itemId); // newest first
+  const ref = itemDoc(db, uid, itemId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const newest = history[0] ?? null;
+  const distinctTrips = new Set(history.map((h) => h.tripId)).size;
+  await setDoc(ref, {
+    ...(snap.data() as Item),
+    lastPricePerBaseUnit: newest?.pricePerBaseUnit ?? null,
+    lastUnit: newest?.unit ?? null,
+    lastBaseUnit: newest?.baseUnit ?? null,
+    lastPriceDate: newest?.tripDate ?? null,
+    lastMarketId: newest?.marketId ?? null,
+    lastMarketName: newest?.marketName ?? null,
+    lastVariant: newest?.variant ?? null,
+    purchaseCount: distinctTrips,
+  });
+}
+
+export async function setTripMarket(
+  db: Firestore, uid: string, tripId: string, marketId: string | null, marketName: string | null,
+): Promise<void> {
+  const ref = tripDoc(db, uid, tripId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  await setDoc(ref, { ...(snap.data() as Trip), defaultMarketId: marketId, defaultMarketName: marketName });
 }
 
 export async function getTripItems(db: Firestore, uid: string, tripId: string): Promise<TripItem[]> {
@@ -83,58 +141,13 @@ export async function getTripItems(db: Firestore, uid: string, tripId: string): 
 }
 
 export async function saveTrip(db: Firestore, uid: string, tripId: string): Promise<Trip> {
-  const tripRef = tripDoc(db, uid, tripId);
-  const tripSnap = await getDoc(tripRef);
-  if (!tripSnap.exists()) throw new Error(`Trip ${tripId} not found`);
-  const trip = tripSnap.data() as Trip;
-  // Integrity guard: saving runs the item fan-out (purchaseCount increment).
-  // Refuse to re-save an already-saved trip so the fan-out can't double-count.
-  if (trip.status !== 'draft') throw new Error(`Trip ${tripId} is not a draft`);
-
-  const tripItems = await getTripItems(db, uid, tripId);
-  const total = tripTotal(tripItems);
-  const itemCount = tripItems.length;
-
-  // Distinct non-null market names, first-seen order, for the trip-list rows.
-  const marketNames: string[] = [];
-  for (const ti of tripItems) {
-    if (ti.marketName != null && !marketNames.includes(ti.marketName)) marketNames.push(ti.marketName);
-  }
-
-  const batch = writeBatch(db);
-  batch.set(tripRef, { ...trip, status: 'saved', total, itemCount, marketNames });
-
-  // Fan-out: update each distinct item's denormalized last-price fields.
-  // We aggregate per itemId FIRST because a WriteBatch applies only one write
-  // per document — issuing batch.set() twice for the same item would drop all
-  // but the last (so increment(1) would fire once, not twice). purchaseCount is
-  // "how many trips bought this item" (cf. the "N biyahe" count in the UI), so
-  // it increments by 1 per distinct item per trip. The latest priced line wins
-  // for lastPrice/lastVendor/lastPriceUnit (array order = insertion order).
-  const latestByItem = new Map<string, TripItem>();
-  for (const ti of tripItems) {
-    if (ti.pricePaid == null) continue;
-    latestByItem.set(ti.itemId, ti);
-  }
-  for (const ti of latestByItem.values()) {
-    batch.set(
-      itemDoc(db, uid, ti.itemId),
-      {
-        lastPricePerBaseUnit: ti.pricePerBaseUnit,
-        lastUnit: ti.unit,
-        lastBaseUnit: ti.baseUnit,
-        lastPriceDate: ti.tripDate,
-        lastMarketId: ti.marketId,
-        lastMarketName: ti.marketName,
-        lastVariant: ti.variant,
-        purchaseCount: increment(1),
-      },
-      { merge: true },
-    );
-  }
-
-  await batch.commit();
-  return { ...trip, status: 'saved', total, itemCount, marketNames };
+  await recomputeTrip(db, uid, tripId);
+  const ref = tripDoc(db, uid, tripId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error(`Trip ${tripId} not found`);
+  const trip = { ...(snap.data() as Trip), status: 'saved' as const };
+  await setDoc(ref, trip);
+  return trip;
 }
 
 /**
@@ -207,12 +220,19 @@ export async function updateTripItem(
   const next: TripItem = { ...(snap.data() as TripItem), ...patch };
   next.pricePerBaseUnit = pricePerBaseUnit(next.pricePaid, next.quantity, next.unit);
   await setDoc(ref, next);
+  await recomputeTrip(db, uid, tripId);
+  await recomputeItem(db, uid, next.itemId);
 }
 
 export async function removeTripItem(
   db: Firestore, uid: string, tripId: string, tripItemId: string,
 ): Promise<void> {
-  await deleteDoc(doc(tripItemsCol(db, uid, tripId), tripItemId));
+  const ref = doc(tripItemsCol(db, uid, tripId), tripItemId);
+  const snap = await getDoc(ref);
+  const itemId = snap.exists() ? (snap.data() as TripItem).itemId : null;
+  await deleteDoc(ref);
+  await recomputeTrip(db, uid, tripId);
+  if (itemId) await recomputeItem(db, uid, itemId);
 }
 
 export async function deleteTrip(db: Firestore, uid: string, tripId: string): Promise<void> {

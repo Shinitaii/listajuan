@@ -5,33 +5,37 @@
   import { startLibrary } from './lib/state/library.svelte';
   import { startTrips } from './lib/state/trips.svelte';
   import { startMarkets } from './lib/state/markets.svelte';
+  import { startSettings } from './lib/state/settings.svelte';
   import TabBar from './lib/ui/TabBar.svelte';
   import Home from './routes/Home.svelte';
   import Biyahe from './routes/Biyahe.svelte';
   import Items from './routes/Items.svelte';
   import Gastos from './routes/Gastos.svelte';
-  import LogTrip from './routes/LogTrip.svelte';
-  import TripSummary from './routes/TripSummary.svelte';
+  import Trip from './routes/Trip.svelte';
   import ItemHistory from './routes/ItemHistory.svelte';
+  import More from './routes/More.svelte';
+  import Markets from './routes/Markets.svelte';
+  import Settings from './routes/Settings.svelte';
 
   const routes = {
     '/': Home,
     '/biyahe': Biyahe,
     '/items': Items,
     '/gastos': Gastos,
-    '/log/:tripId': LogTrip,
-    '/trip/:tripId': TripSummary,
+    '/more': More,
+    '/markets': Markets,
+    '/settings': Settings,
+    '/trip/:tripId': Trip,
     '/item/:itemId': ItemHistory,
   };
 
   onMount(async () => {
     await startSession();
-    if (session.uid) { startLibrary(session.uid); startTrips(session.uid); startMarkets(session.uid); }
+    if (session.uid) { startLibrary(session.uid); startTrips(session.uid); startMarkets(session.uid); startSettings(session.uid); }
   });
 
-  // hide the tab bar on the focused logging flow (full-screen stepper)
-  import { router } from 'svelte-spa-router';
-  const showTabs = $derived(!router.location.startsWith('/log/'));
+  // tabs are visible everywhere now (the /log full-screen stepper is gone)
+  const showTabs = true;
 </script>
 
 {#if !session.ready}

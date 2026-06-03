@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "PowerShell(Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force)",
+      "PowerShell(npm run test:emulator 2>&1)"
+    ]
+  }
+}

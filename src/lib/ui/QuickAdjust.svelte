@@ -52,8 +52,8 @@
   .val { font-size: var(--fs-hero); text-align: center; width: 100%; border: none;
     border-bottom: 3px solid var(--c-ink); outline: none; }
   .row { display: flex; align-items: stretch; gap: 8px; }
-  .chips { display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  .chip { min-height: 44px; border: 2px solid var(--c-ink); border-radius: var(--radius);
+  .chips { display: flex; flex-direction: row; gap: 6px; flex: 1; }
+  .chip { flex: 1; min-height: 44px; border: 2px solid var(--c-ink); border-radius: var(--radius);
     background: var(--c-bg); font-weight: 700; font-size: var(--fs-body); }
   .chip.on { background: var(--c-accent); color: #fff; border-color: var(--c-accent); }
   .scalecol, .signcol { display: flex; flex-direction: column; gap: 6px; }

@@ -67,10 +67,19 @@ Everything is scoped under `/users/{uid}/…` so Security Rules are trivial and 
 
 Speak "2 kilo repolyo 50 piso" → prefills item name, qty, unit, and price in AddItem for one-tap confirmation.
 
-- **`src/lib/voice/capture.ts`** — `isVoiceAvailable()` + `captureTranscript()`: Capacitor `@capacitor-community/speech-recognition` wrapper; returns `null` on web/dev, permission denied, or any error. Language: `fil-PH`. Mirrors `src/lib/scan/capture.ts` pattern.
+- **`src/lib/voice/capture.ts`** — `isVoiceAvailable()` + `captureTranscript(lang?: string)`: Capacitor `@capacitor-community/speech-recognition` wrapper; returns `null` on web/dev, permission denied, or any error. `lang` defaults to `'fil-PH'`; callers pass the user's selected dialect. Mirrors `src/lib/scan/capture.ts` pattern.
 - **`src/lib/voice/parse.ts`** — `parseVoiceInput(transcript, deps?)`: pure synchronous function. Extracts qty (digits only, v1), unit (mapped to `Unit` type via `UNIT_MAP`), price (`₱N`, `N piso/pesos`, or fallback last-number), and `itemName` (remaining text). Calls `deps.searchLibrary(itemName)[0]` for `matchedItem`. Tagalog number words (dalawa, tatlo…) documented as extension in comment block — NOT implemented.
-- Tests: `src/lib/voice/capture.test.ts` (8 pure), `src/lib/voice/parse.test.ts` (40 pure), `src/lib/voice/voice-entry.integration.test.ts` (7 integration).
-- UI wiring: mic button wired in `src/routes/AddItem.svelte` — `isVoiceAvailable()` guard, `onVoice()` handler calls `captureTranscript()` → `parseVoiceInput()` → prefills fields.
+- Tests: `src/lib/voice/capture.test.ts` (10 pure), `src/lib/voice/parse.test.ts` (46 pure), `src/lib/voice/voice-entry.integration.test.ts` (7 integration).
+- UI wiring: mic button wired in `src/routes/AddItem.svelte` — `isVoiceAvailable()` guard, `onVoice()` handler calls `captureTranscript(voiceLang)` → `parseVoiceInput()` → prefills fields.
+
+### Dialect support (feat/dialect-support)
+
+A "Wika" dropdown above the mic button lets the user pick Tagalog / Bisaya / Ilocano / Ingles. Selection persists via `localStorage`. UNIT_MAP expanded with Bisaya and Ilocano unit synonyms.
+
+- **`src/lib/voice/lang.ts`** — `DIALECT_OPTIONS: DialectOption[]` (4 entries), `getDialect()` (reads `localStorage` key `'voice_dialect'`, defaults `'fil-PH'`, safe on throws), `setDialect(lang)` (writes, silent on error). No Firestore — device-local preference.
+- **`src/lib/voice/parse.ts`** — UNIT_MAP additions: Bisaya `usa`/`duha`→`'piraso'`, `gatosan`→`'g'`; Ilocano `maysa`/`dua`→`'piraso'`, `kilon`→`'kg'`. Flat additive map — `UNIT_PATTERN` auto-rebuilds longest-first so `kilon` (5) sorts before `kilo` (4).
+- Tests: `src/lib/voice/lang.test.ts` (10 pure), `src/lib/voice/dialect-support.integration.test.ts` (11 integration).
+- BCP-47 note: Chrome has no `ceb-PH`/`ilo-PH` — Bisaya and Ilocano both use `fil-PH` for the engine; selector labels are user-facing ("Bisaya", "Ilocano").
 
 ### Barcode prefill (feat/barcode-prefill)
 

@@ -81,11 +81,12 @@ The one non-trivial operation is the **save fan-out** (`saveTrip`): a single bat
 
 v1 core loop is complete and tested: trip logging, item library with autocomplete/recognition tiles, per-item price history, trip summary, and monthly Gastos.
 
-**Shipped (feat/barcode-prefill + feat/voice-entry — pending merge to main):**
+**Merged to main:**
 - Barcode → name prefill: scan a barcode to match a library item (offline) or fetch a name from Open Food Facts. Scan button wired in AddItem.
 - Voice entry: speak "2 kilo repolyo 50 piso" to prefill item name, quantity, unit, and price. Mic button wired in AddItem.
+- Cart tracker: during a draft trip, tap any item row to mark it as in-cart ("Na sa cart na"). The list splits into Pending and Done. Items added in the last 5 minutes show a "Bagong dagdag" badge.
 
-**Shipped (feat/cart-tracker — pending merge to main):**
-Cart tracker — during a draft trip, tap any item row to mark it as in-cart ("Na sa cart na"). The list splits into Pending (top, grouped by market) and Done (bottom, struck-through). Items added in the last 5 minutes show a "Bagong dagdag" badge. Saved trips are unchanged.
+**In progress (feat/dialect-support — pending merge to main):**
+Dialect support — a "Wika" dropdown above the mic button lets Bisaya, Ilocano, and English speakers use voice entry. Selection persists via `localStorage`. UNIT_MAP extended with Bisaya (`usa`, `gatosan`) and Ilocano (`maysa`, `kilon`) unit synonyms.
 
 See `docs/architecture-roadmap.md` for the broader roadmap.

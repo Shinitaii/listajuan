@@ -41,7 +41,7 @@ npx cap add android               # one-time, creates android/ (gitignored)
 
 ## Architecture — the load-bearing rules
 
-**1. All Firebase access is isolated behind `src/lib/data/`.** Components MUST NOT import `firebase/firestore` directly — they import functions and stores from the data layer (`createDraftTrip`, `saveTrip`, `searchItems`, `priceHistory`, etc.). This keeps components framework-pure and testable and keeps the one piece of real logic in one place.
+**1. All Firebase access is isolated behind `src/lib/data/`.** Components MUST NOT import `firebase/firestore` directly — they import functions and stores from the data layer (`createDraftTrip`, `saveTrip`, `searchItems`, `priceHistory`, `findItemByBarcode`, `attachBarcode`, etc.). This keeps components framework-pure and testable and keeps the one piece of real logic in one place.
 
 **2. Pure calculations live in `src/lib/domain/calc.ts`** (totals, price-per-unit, month delta) with no Firebase — plain Vitest unit tests. Types live in `src/lib/domain/types.ts`.
 
@@ -62,6 +62,16 @@ Everything is scoped under `/users/{uid}/…` so Security Rules are trivial and 
 **Price history** uses a **collectionGroup query on `tripItems` where `uid == me AND itemId == X` ordered by `tripDate`** (`priceHistory` in `trips.ts`). The `uid` clause is mandatory — Firestore rejects a collectionGroup query whose rule checks `resource.data.uid` unless the query constrains `uid` — so each tripItem denormalizes `uid` (and `tripDate`) for this purpose. It depends on the composite index `(uid, itemId, tripDate desc)` in `firestore.indexes.json` AND a dedicated collectionGroup read rule in `firestore.rules` (the nested `/users/{uid}/{document=**}` rule does NOT cover collectionGroup queries). The emulator auto-creates indexes, but the index + rules must be deployed for production.
 
 **Emulator tests run serially** (`--no-file-parallelism`): they share one emulator and each clears the whole DB in `beforeEach`, so parallel test files would wipe each other.
+
+### Barcode prefill (feat/barcode-prefill)
+
+Three-tier scan flow: library-first offline match → Open Food Facts API fallback → silent manual entry.
+
+- **`src/lib/data/items.ts`** — `findItemByBarcode(db, uid, code)` (client-side filter, offline-safe) and `attachBarcode(db, uid, itemId, code)` (idempotent append). `Item` carries `barcodes: string[]` (`src/lib/domain/types.ts`).
+- **`src/lib/scan/lookup.ts`** — `lookupProductName(code, deps?)`: Open Food Facts fetch wrapper; never throws; offline/not-found/error → `null`. `fetch` is injectable for testing.
+- **`src/lib/scan/capture.ts`** — `isScanAvailable()` + `scanBarcode()`: Capacitor `@capacitor-mlkit/barcode-scanning` wrapper; returns `null` on web/dev or permission denied.
+- Tests: `src/lib/data/items.barcode.emulator.test.ts` (5 emulator tests), `src/lib/scan/lookup.test.ts` (6 pure unit tests).
+- UI wiring (Scan button, prefill field) is **not yet done** — data/scan layer only.
 
 ## Testing conventions
 

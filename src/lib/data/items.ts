@@ -17,6 +17,7 @@ export async function createItem(db: Firestore, uid: string, input: NewItemInput
     canonicalName: input.canonicalName,
     nameLower: input.canonicalName.toLowerCase(),
     aliases: input.aliases ?? [],
+    barcodes: [],
     category: input.category,
     form: input.form,
     defaultUnit: input.defaultUnit,
@@ -51,6 +52,32 @@ export async function searchItems(db: Firestore, uid: string, query: string): Pr
   return items.filter(
     (it) => it.nameLower.startsWith(q) || it.aliases.some((a) => a.toLowerCase().startsWith(q)),
   );
+}
+
+/**
+ * Library-first barcode lookup: returns the item carrying `code`, or null.
+ * Client-side filter over the single-user library (offline against local cache),
+ * mirroring `searchItems`. Tolerates older docs with no `barcodes` field.
+ */
+export async function findItemByBarcode(db: Firestore, uid: string, code: string): Promise<Item | null> {
+  const c = code.trim();
+  if (!c) return null;
+  const snap = await getDocs(itemsCol(db, uid));
+  const match = snap.docs.map((d) => d.data() as Item).find((it) => (it.barcodes ?? []).includes(c));
+  return match ?? null;
+}
+
+/** Idempotently attach a barcode to an item so future scans match it locally. */
+export async function attachBarcode(db: Firestore, uid: string, itemId: string, code: string): Promise<void> {
+  const c = code.trim();
+  if (!c) return;
+  const ref = itemDoc(db, uid, itemId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error(`Item ${itemId} not found`);
+  const item = snap.data() as Item;
+  const current = item.barcodes ?? [];
+  if (current.includes(c)) return;
+  await setDoc(ref, { ...item, barcodes: [...current, c] });
 }
 
 export async function updateItemMeta(

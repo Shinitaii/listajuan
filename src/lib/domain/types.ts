@@ -73,4 +73,5 @@ export interface TripItem {
   tripDate: string;
   uid: string;
   addedAt: number;
+  inCart?: boolean;
 }

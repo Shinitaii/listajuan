@@ -1,5 +1,5 @@
 import {
-  doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch,
+  doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, writeBatch,
   query, collectionGroup, where, orderBy, limit, onSnapshot, type Firestore,
 } from 'firebase/firestore';
 import { tripsCol, tripDoc, tripItemsCol, itemDoc } from './paths';
@@ -296,4 +296,19 @@ export function subscribeTripItems(
 ): () => void {
   const q = query(tripItemsCol(db, uid, tripId), orderBy('addedAt', 'asc'));
   return onSnapshot(q, (snap) => cb(snap.docs.map((d) => d.data() as TripItem)));
+}
+
+export async function toggleCartItem(
+  db: Firestore,
+  uid: string,
+  tripId: string,
+  tripItemId: string,
+  inCart: boolean,
+): Promise<void> {
+  const ref = doc(tripItemsCol(db, uid, tripId), tripItemId);
+  try {
+    await updateDoc(ref, { inCart });
+  } catch {
+    // doc doesn't exist — silent no-op
+  }
 }

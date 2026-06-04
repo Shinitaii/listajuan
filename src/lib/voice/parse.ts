@@ -39,6 +39,14 @@ const UNIT_MAP: Record<string, Unit> = {
   pcs: 'piraso',
   dosena: 'dosena',
   dozen: 'dosena',
+  // Bisaya
+  usa: 'piraso',
+  duha: 'piraso',
+  gatosan: 'g',
+  // Ilocano
+  maysa: 'piraso',
+  kilon: 'kg',
+  dua: 'piraso',
 };
 
 // Ordered longest-first so alternation matches greedily (e.g. "liters" before "liter").

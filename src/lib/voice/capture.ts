@@ -20,13 +20,13 @@ export async function isVoiceAvailable(): Promise<boolean> {
  * denied, no speech detected, or any error. Never throws — the caller treats
  * null as "no voice input".
  */
-export async function captureTranscript(): Promise<string | null> {
+export async function captureTranscript(lang?: string): Promise<string | null> {
   try {
     if (!(await isVoiceAvailable())) return null;
     const perm = await SpeechRecognition.requestPermissions();
     if (perm.speechRecognition !== 'granted') return null;
     const { matches } = await SpeechRecognition.start({
-      language: 'fil-PH',
+      language: lang ?? 'fil-PH',
       maxResults: 1,
       popup: false,
     });

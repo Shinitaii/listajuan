@@ -79,4 +79,26 @@ describe('captureTranscript', () => {
     mockStart.mockResolvedValue({ matches: [] });
     expect(await captureTranscript()).toBeNull();
   });
+
+  describe('lang parameter', () => {
+    it('passes fil-PH to SpeechRecognition.start when called with no argument', async () => {
+      mockAvailable.mockResolvedValue({ available: true });
+      mockRequestPermissions.mockResolvedValue({ speechRecognition: 'granted' });
+      mockStart.mockResolvedValue({ matches: ['test'] });
+      await captureTranscript();
+      expect(mockStart).toHaveBeenCalledWith(
+        expect.objectContaining({ language: 'fil-PH' })
+      );
+    });
+
+    it('passes en-PH to SpeechRecognition.start when called with "en-PH"', async () => {
+      mockAvailable.mockResolvedValue({ available: true });
+      mockRequestPermissions.mockResolvedValue({ speechRecognition: 'granted' });
+      mockStart.mockResolvedValue({ matches: ['test'] });
+      await captureTranscript('en-PH');
+      expect(mockStart).toHaveBeenCalledWith(
+        expect.objectContaining({ language: 'en-PH' })
+      );
+    });
+  });
 });

@@ -81,4 +81,6 @@ The one non-trivial operation is the **save fan-out** (`saveTrip`): a single bat
 
 v1 core loop is complete and tested: trip logging, item library with autocomplete/recognition tiles, per-item price history, trip summary, and monthly Gastos.
 
-**In progress (feat/barcode-prefill):** Barcode → name prefill — scan a product barcode to match a library item (offline) or fetch a name suggestion from Open Food Facts (online, best-effort). Data and scan layer complete; UI wiring is next. See `docs/architecture-roadmap.md` for what's next.
+**In progress (feat/barcode-prefill):** Barcode → name prefill — scan a product barcode to match a library item (offline) or fetch a name suggestion from Open Food Facts (online, best-effort). Data and scan layer complete; UI wiring is next.
+
+**In progress (feat/voice-entry):** Voice entry — speak "2 kilo repolyo 50 piso" to prefill item name, quantity, unit, and price in the add-item flow. Voice and parse layer complete (55 tests); UI wiring is next. See `docs/architecture-roadmap.md` for what's next.

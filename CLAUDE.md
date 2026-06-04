@@ -63,6 +63,15 @@ Everything is scoped under `/users/{uid}/…` so Security Rules are trivial and 
 
 **Emulator tests run serially** (`--no-file-parallelism`): they share one emulator and each clears the whole DB in `beforeEach`, so parallel test files would wipe each other.
 
+### Voice entry (feat/voice-entry)
+
+Speak "2 kilo repolyo 50 piso" → prefills item name, qty, unit, and price in AddItem for one-tap confirmation.
+
+- **`src/lib/voice/capture.ts`** — `isVoiceAvailable()` + `captureTranscript()`: Capacitor `@capacitor-community/speech-recognition` wrapper; returns `null` on web/dev, permission denied, or any error. Language: `fil-PH`. Mirrors `src/lib/scan/capture.ts` pattern.
+- **`src/lib/voice/parse.ts`** — `parseVoiceInput(transcript, deps?)`: pure synchronous function. Extracts qty (digits only, v1), unit (mapped to `Unit` type via `UNIT_MAP`), price (`₱N`, `N piso/pesos`, or fallback last-number), and `itemName` (remaining text). Calls `deps.searchLibrary(itemName)[0]` for `matchedItem`. Tagalog number words (dalawa, tatlo…) documented as extension in comment block — NOT implemented.
+- Tests: `src/lib/voice/capture.test.ts` (8 pure), `src/lib/voice/parse.test.ts` (40 pure), `src/lib/voice/voice-entry.integration.test.ts` (7 integration).
+- UI wiring (mic button in AddItem.svelte) is **not yet done** — voice layer only.
+
 ### Barcode prefill (feat/barcode-prefill)
 
 Three-tier scan flow: library-first offline match → Open Food Facts API fallback → silent manual entry.

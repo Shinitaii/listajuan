@@ -81,6 +81,11 @@ The one non-trivial operation is the **save fan-out** (`saveTrip`): a single bat
 
 v1 core loop is complete and tested: trip logging, item library with autocomplete/recognition tiles, per-item price history, trip summary, and monthly Gastos.
 
-**In progress (feat/barcode-prefill):** Barcode → name prefill — scan a product barcode to match a library item (offline) or fetch a name suggestion from Open Food Facts (online, best-effort). Data and scan layer complete; UI wiring is next.
+**Shipped (feat/barcode-prefill + feat/voice-entry — pending merge to main):**
+- Barcode → name prefill: scan a barcode to match a library item (offline) or fetch a name from Open Food Facts. Scan button wired in AddItem.
+- Voice entry: speak "2 kilo repolyo 50 piso" to prefill item name, quantity, unit, and price. Mic button wired in AddItem.
 
-**In progress (feat/voice-entry):** Voice entry — speak "2 kilo repolyo 50 piso" to prefill item name, quantity, unit, and price in the add-item flow. Voice and parse layer complete (55 tests); UI wiring is next. See `docs/architecture-roadmap.md` for what's next.
+**Shipped (feat/cart-tracker — pending merge to main):**
+Cart tracker — during a draft trip, tap any item row to mark it as in-cart ("Na sa cart na"). The list splits into Pending (top, grouped by market) and Done (bottom, struck-through). Items added in the last 5 minutes show a "Bagong dagdag" badge. Saved trips are unchanged.
+
+See `docs/architecture-roadmap.md` for the broader roadmap.

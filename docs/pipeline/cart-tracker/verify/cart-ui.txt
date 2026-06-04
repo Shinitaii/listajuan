@@ -1,0 +1,10 @@
+$ npx tsc --noEmit
+(no output — clean, exit 0)
+
+$ npm test
+ Test Files  8 passed (8)
+      Tests  85 passed (85)
+
+GREEN — Trip.svelte compiles cleanly. All existing pure tests pass.
+No separate test file for cart-ui (tsc + visual review per coding.md spec).
+UI changes: pending/done section split, onToggleCart, recently-added badge, stopPropagation wrapper on edit/delete buttons.

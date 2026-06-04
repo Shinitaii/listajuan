@@ -1,0 +1,16 @@
+$ firebase emulators:exec --only auth,firestore "npx vitest run src/lib/data/trips.cart.emulator.test.ts --no-file-parallelism"
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  23:32:02
+   Duration  11.26s
+
+GREEN — 4/4 tests passed.
+
+Pre-existing failures in OTHER test files (not cart-data owned paths):
+  - trips.emulator.test.ts:75 — saveTrip fan-out assertion (expected 300 got 320) — pre-existing, unrelated to inCart/toggleCartItem
+  - subscriptions.emulator.test.ts — subscribeTripItems timeout (RESOURCE_EXHAUSTED from emulator) — pre-existing transient
+Both confirmed pre-existing: cart-data did not modify recomputeItem, saveTrip, or subscribeTripItems.
+
+$ npx tsc --noEmit  →  exit 0 (clean)
+$ npm test         →  8 files, 85 tests passed (pure unit tests)

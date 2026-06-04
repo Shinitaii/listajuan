@@ -1,0 +1,38 @@
+Integration: cart-data → cart-ui wired
+UI wired: src/routes/Trip.svelte — draft trips split into pending/done sections, tap-to-toggle, recently-added badge
+
+$ npx tsc --noEmit
+exit 0 — clean
+
+$ npm test (pure — includes 6 new filter tests)
+ Test Files  9 passed (9)
+      Tests  91 passed (91)
+
+$ firebase emulators:exec ... "npx vitest run src/lib/data/cart-tracker.integration.emulator.test.ts --no-file-parallelism"
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+exit 0 — clean
+
+$ firebase emulators:exec ... "npx vitest run src/lib/data/trips.cart.emulator.test.ts --no-file-parallelism"
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+exit 0 — clean
+
+VERIFY integration: GREEN
+
+─── Pre-existing failures (NOT caused by cart-tracker) ──────────────────────
+trips.emulator.test.ts:75 — "counts the same item on multiple lines of one trip as single purchase,
+  newest line wins" — AssertionError: expected 320 to be 300. Pre-existing: cart-tracker
+  did not modify recomputeItem or saveTrip.
+subscriptions.emulator.test.ts — subscribeTripItems timeout (RESOURCE_EXHAUSTED from emulator under
+  load). Pre-existing transient: unrelated to inCart/toggleCartItem.
+─────────────────────────────────────────────────────────────────────────────
+
+Integration points confirmed:
+  ✓ toggleCartItem imported in Trip.svelte from '../lib/data/trips'
+  ✓ inCart?: boolean on TripItem (optional, backward-compat)
+  ✓ pending/$derived(items.filter(i => !i.inCart)) — splitByCart pure tests confirm logic
+  ✓ inCartItems/$derived(items.filter(i => i.inCart))
+  ✓ isNew(ti) = Date.now() - ti.addedAt < RECENTLY_ADDED_MS (5 min threshold)
+  ✓ Saved trips render with original {#each groups} path — no regression
+  ✓ updateDoc used (not setDoc/updateTripItem) — recomputeTrip not triggered

@@ -70,7 +70,7 @@ Speak "2 kilo repolyo 50 piso" → prefills item name, qty, unit, and price in A
 - **`src/lib/voice/capture.ts`** — `isVoiceAvailable()` + `captureTranscript()`: Capacitor `@capacitor-community/speech-recognition` wrapper; returns `null` on web/dev, permission denied, or any error. Language: `fil-PH`. Mirrors `src/lib/scan/capture.ts` pattern.
 - **`src/lib/voice/parse.ts`** — `parseVoiceInput(transcript, deps?)`: pure synchronous function. Extracts qty (digits only, v1), unit (mapped to `Unit` type via `UNIT_MAP`), price (`₱N`, `N piso/pesos`, or fallback last-number), and `itemName` (remaining text). Calls `deps.searchLibrary(itemName)[0]` for `matchedItem`. Tagalog number words (dalawa, tatlo…) documented as extension in comment block — NOT implemented.
 - Tests: `src/lib/voice/capture.test.ts` (8 pure), `src/lib/voice/parse.test.ts` (40 pure), `src/lib/voice/voice-entry.integration.test.ts` (7 integration).
-- UI wiring (mic button in AddItem.svelte) is **not yet done** — voice layer only.
+- UI wiring: mic button wired in `src/routes/AddItem.svelte` — `isVoiceAvailable()` guard, `onVoice()` handler calls `captureTranscript()` → `parseVoiceInput()` → prefills fields.
 
 ### Barcode prefill (feat/barcode-prefill)
 
@@ -80,7 +80,16 @@ Three-tier scan flow: library-first offline match → Open Food Facts API fallba
 - **`src/lib/scan/lookup.ts`** — `lookupProductName(code, deps?)`: Open Food Facts fetch wrapper; never throws; offline/not-found/error → `null`. `fetch` is injectable for testing.
 - **`src/lib/scan/capture.ts`** — `isScanAvailable()` + `scanBarcode()`: Capacitor `@capacitor-mlkit/barcode-scanning` wrapper; returns `null` on web/dev or permission denied.
 - Tests: `src/lib/data/items.barcode.emulator.test.ts` (5 emulator tests), `src/lib/scan/lookup.test.ts` (6 pure unit tests).
-- UI wiring (Scan button, prefill field) is **not yet done** — data/scan layer only.
+- UI wiring: scan button wired in `src/routes/AddItem.svelte` — `isScanAvailable()` guard, `onScan()` handler calls `scanBarcode()` → `resolveScannedCode()` → `pick()` or `newName` prefill.
+
+### Cart tracker (feat/cart-tracker)
+
+Tap any item row during a draft trip → item moves to "Na sa cart na" section (struck-through, muted). Tap again → back to pending. Items added in the last 5 minutes show a "Bagong dagdag" badge.
+
+- **`src/lib/domain/types.ts`** — `inCart?: boolean` added to `TripItem` (optional; `undefined` = pending — backward-compatible with all existing docs).
+- **`src/lib/data/trips.ts`** — `toggleCartItem(db, uid, tripId, tripItemId, inCart)`: field-only `updateDoc` patch. Does NOT call `recomputeTrip` — cart state is display-only and must not affect trip totals.
+- **`src/routes/Trip.svelte`** — `pending`/`inCartItems` `$derived` splits; `RECENTLY_ADDED_MS = 5 * 60 * 1000`; `isNew(ti)` badge helper; `onToggleCart(ti)` handler. Full-row tap target (44px). Edit/delete buttons wrapped in `stopPropagation` div to prevent row-toggle on those taps. Draft-trip gate: `{#if trip?.status === 'draft'}` wraps entire split; saved trips render unchanged.
+- Tests: `src/lib/data/trips.cart.emulator.test.ts` (4 emulator), `src/lib/data/cart-tracker.filter.test.ts` (6 pure), `src/lib/data/cart-tracker.integration.emulator.test.ts` (2 emulator integration).
 
 ## Testing conventions
 

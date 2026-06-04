@@ -5,7 +5,10 @@
   import { lookupProductName } from '../lib/scan/lookup';
   import { resolveScannedCode } from '../lib/scan/resolveScan';
   import { isScanAvailable, scanBarcode } from '../lib/scan/capture';
-  import { ScanBarcode } from 'lucide-svelte';
+  import { isVoiceAvailable, captureTranscript } from '../lib/voice/capture';
+  import { parseVoiceInput } from '../lib/voice/parse';
+  import { searchLibrary } from '../lib/state/library.svelte';
+  import { ScanBarcode, Mic } from 'lucide-svelte';
   import { lastContextFor, type NewTripItemInput } from '../lib/data/trips';
   import { unitsFor, baseUnitFor, baseUnitLabel, pricePerBaseUnit, unitFactor, formForUnit } from '../lib/domain/units';
   import ItemPicker from './ItemPicker.svelte';
@@ -34,8 +37,10 @@
   let newCategory = $state<Category | null>(null);
   // barcode scan: availability (native only) + the code awaiting attachment to the chosen item
   let scanAvailable = $state(false);
+  let voiceAvailable = $state(false);
   let pendingScanCode = $state<string | null>(null);
   isScanAvailable().then((v) => (scanAvailable = v));
+  isVoiceAvailable().then((v) => (voiceAvailable = v));
 
   let marketId = $state<string | null>(defaultMarketId);
   let marketName = $state<string | null>(defaultMarketName);
@@ -117,6 +122,20 @@
     }
   }
 
+  async function onVoice() {
+    const transcript = await captureTranscript();
+    if (!transcript) return;
+    const result = parseVoiceInput(transcript, { searchLibrary });
+    if (result.matchedItem) {
+      await pick(result.matchedItem);
+    } else if (result.itemName) {
+      newName = result.itemName;
+    }
+    if (result.qty != null) qty = result.qty;
+    if (result.unit != null) unit = result.unit;
+    if (result.price != null) { price = result.price; priceTouched = true; }
+  }
+
   async function confirmNewItem() {
     if (!newName.trim() || !newForm || !newCategory) return;
     const created = await createItem(db, uid, {
@@ -145,9 +164,14 @@
   {#if existing && !item}
     <p class="lbl">Naglo-load…</p>
   {:else if !item && !newName}
-    {#if scanAvailable}
-      <button class="scan" onclick={onScan}><ScanBarcode size={20} /> I-scan ang barcode</button>
-    {/if}
+    <div class="capture-row">
+      {#if scanAvailable}
+        <button class="scan" onclick={onScan}><ScanBarcode size={20} /> I-scan</button>
+      {/if}
+      {#if voiceAvailable}
+        <button class="scan" onclick={onVoice}><Mic size={20} /> Magsalita</button>
+      {/if}
+    </div>
     <ItemPicker onPick={pick} />
   {:else if !item}
     <h2>Bagong item: "{newName}"</h2>
@@ -193,6 +217,8 @@
   .market { text-align: left; border: 2px solid var(--c-ink); border-radius: var(--radius); padding: 12px; background: var(--c-bg); font-weight: 700; }
   .variant { border: 2px solid var(--c-ink); border-radius: var(--radius); padding: 10px; font-size: var(--fs-body); }
   .readout { font-size: var(--fs-price); font-weight: 700; color: var(--c-accent); text-align: center; }
+  .capture-row { display: flex; gap: 8px; }
+  .capture-row .scan { flex: 1; }
   .scan { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px;
     border: 2px solid var(--c-accent); color: var(--c-accent); border-radius: var(--radius);
     padding: 10px; background: var(--c-bg); font-weight: 700; font-size: var(--fs-body); }

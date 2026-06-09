@@ -56,7 +56,7 @@ export async function resolveList(
   if (existing) return existing;
 
   const list = await createList(db, uid, displayName);
-  await updateDoc(userDoc(db, uid), { listId: list.id });
+  await setDoc(userDoc(db, uid), { listId: list.id }, { merge: true });
   return list.id;
 }
 

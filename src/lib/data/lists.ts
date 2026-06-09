@@ -168,11 +168,16 @@ export function subscribeMembers(
   db: Firestore,
   listId: string,
   cb: (members: MemberRow[]) => void,
+  onError?: (err: Error) => void,
 ): () => void {
-  return onSnapshot(listDoc(db, listId), (snap) => {
-    if (!snap.exists()) { cb([]); return; }
-    cb(membersToRows((snap.data() as HouseholdList).members));
-  });
+  return onSnapshot(
+    listDoc(db, listId),
+    (snap) => {
+      if (!snap.exists()) { cb([]); return; }
+      cb(membersToRows((snap.data() as HouseholdList).members));
+    },
+    onError,
+  );
 }
 
 export async function getList(db: Firestore, listId: string): Promise<HouseholdList | null> {

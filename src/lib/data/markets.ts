@@ -4,24 +4,24 @@ import type { Market, MarketType } from '../domain/types';
 
 export interface NewMarketInput { name: string; type: MarketType; }
 
-export async function createMarket(db: Firestore, uid: string, input: NewMarketInput): Promise<Market> {
-  const ref = doc(marketsCol(db, uid));
+export async function createMarket(db: Firestore, listId: string, input: NewMarketInput): Promise<Market> {
+  const ref = doc(marketsCol(db, listId));
   const market: Market = { id: ref.id, name: input.name, nameLower: input.name.toLowerCase(), type: input.type };
   await setDoc(ref, market);
   return market;
 }
 
-export async function getMarket(db: Firestore, uid: string, marketId: string): Promise<Market | null> {
-  const snap = await getDoc(marketDoc(db, uid, marketId));
+export async function getMarket(db: Firestore, listId: string, marketId: string): Promise<Market | null> {
+  const snap = await getDoc(marketDoc(db, listId, marketId));
   return snap.exists() ? (snap.data() as Market) : null;
 }
 
-export function subscribeMarkets(db: Firestore, uid: string, cb: (markets: Market[]) => void): () => void {
-  return onSnapshot(marketsCol(db, uid), (snap) => cb(snap.docs.map((d) => d.data() as Market)));
+export function subscribeMarkets(db: Firestore, listId: string, cb: (markets: Market[]) => void): () => void {
+  return onSnapshot(marketsCol(db, listId), (snap) => cb(snap.docs.map((d) => d.data() as Market)));
 }
 
-export async function updateMarket(db: Firestore, uid: string, marketId: string, patch: { name?: string; type?: MarketType }): Promise<void> {
-  const ref = marketDoc(db, uid, marketId);
+export async function updateMarket(db: Firestore, listId: string, marketId: string, patch: { name?: string; type?: MarketType }): Promise<void> {
+  const ref = marketDoc(db, listId, marketId);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error(`Market ${marketId} not found`);
   const cur = snap.data() as Market;
@@ -29,6 +29,6 @@ export async function updateMarket(db: Firestore, uid: string, marketId: string,
   await setDoc(ref, { ...cur, name, nameLower: name.toLowerCase(), type: patch.type ?? cur.type });
 }
 
-export async function deleteMarket(db: Firestore, uid: string, marketId: string): Promise<void> {
-  await deleteDoc(marketDoc(db, uid, marketId));
+export async function deleteMarket(db: Firestore, listId: string, marketId: string): Promise<void> {
+  await deleteDoc(marketDoc(db, listId, marketId));
 }

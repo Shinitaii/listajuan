@@ -13,7 +13,7 @@
   import type { Trip, TripItem } from '../lib/domain/types';
 
   let { params } = $props<{ params: { tripId: string } }>();
-  const uid = session.uid!;
+  const listId = session.listId!;
   const tripId = $derived(params.tripId);
 
   let trip = $state<Trip | null>(null);
@@ -24,8 +24,8 @@
   let pickingMarket = $state(false);
 
   $effect(() => {
-    getTrip(db, uid, tripId).then((t) => { trip = t; });
-    const unsub = subscribeTripItems(db, uid, tripId, (i) => { items = i; });
+    getTrip(db, listId, tripId).then((t) => { trip = t; });
+    const unsub = subscribeTripItems(db, listId, tripId, (i) => { items = i; });
     return () => unsub();
   });
 
@@ -39,21 +39,21 @@
   const pendingGroups = $derived(groupByMarket(pending));
   const isNew = (ti: TripItem) => Date.now() - ti.addedAt < RECENTLY_ADDED_MS;
 
-  async function onAdd(input: NewTripItemInput) { await addTripItem(db, uid, tripId, input); mode = 'view'; }
+  async function onAdd(input: NewTripItemInput) { await addTripItem(db, listId, tripId, input); mode = 'view'; }
   async function onEditSave(input: NewTripItemInput) {
-    if (editing) await updateTripItem(db, uid, tripId, editing.id, { quantity: input.quantity, pricePaid: input.pricePaid, unit: input.unit, variant: input.variant, marketId: input.marketId, marketName: input.marketName });
+    if (editing) await updateTripItem(db, listId, tripId, editing.id, { quantity: input.quantity, pricePaid: input.pricePaid, unit: input.unit, variant: input.variant, marketId: input.marketId, marketName: input.marketName });
     editing = null; mode = 'view';
   }
-  function onMarketChange(id: string | null, name: string | null) { setTripMarket(db, uid, tripId, id, name); }
+  function onMarketChange(id: string | null, name: string | null) { setTripMarket(db, listId, tripId, id, name); }
   async function pickTripMarket(m: { id: string; name: string }) {
-    await setTripMarket(db, uid, tripId, m.id, m.name);
+    await setTripMarket(db, listId, tripId, m.id, m.name);
     if (trip) trip = { ...trip, defaultMarketId: m.id, defaultMarketName: m.name };
     pickingMarket = false;
   }
-  async function remove(ti: TripItem) { await removeTripItem(db, uid, tripId, ti.id); }
+  async function remove(ti: TripItem) { await removeTripItem(db, listId, tripId, ti.id); }
   function startEdit(ti: TripItem) { editing = ti; mode = 'edit'; }
-  async function finish() { await saveTrip(db, uid, tripId); push('/'); }
-  async function onToggleCart(ti: TripItem) { await toggleCartItem(db, uid, tripId, ti.id, !ti.inCart); }
+  async function finish() { await saveTrip(db, listId, tripId); push('/'); }
+  async function onToggleCart(ti: TripItem) { await toggleCartItem(db, listId, tripId, ti.id, !ti.inCart); }
 </script>
 
 <section class="screen">
@@ -137,7 +137,7 @@
 
 {#if confirmDelete}
   <ConfirmDialog title="Burahin ang biyahe?" message="Hindi na ito maibabalik." confirmLabel="Oo, burahin"
-    onConfirm={async () => { await deleteTrip(db, uid, tripId); push('/'); }} onCancel={() => (confirmDelete = false)} />
+    onConfirm={async () => { await deleteTrip(db, listId, tripId); push('/'); }} onCancel={() => (confirmDelete = false)} />
 {/if}
 
 <style>

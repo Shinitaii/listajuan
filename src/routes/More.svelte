@@ -95,17 +95,21 @@
 
 {#if confirmRemove}
   <ConfirmDialog
+    title="Alisin ang miyembro?"
     message="Aalisin ang miyembro sa listahan. Magpapatuloy?"
-    onconfirm={() => handleRemove(confirmRemove!)}
-    oncancel={() => { confirmRemove = null; }}
+    confirmLabel="Oo, alisin"
+    onConfirm={() => handleRemove(confirmRemove!)}
+    onCancel={() => { confirmRemove = null; }}
   />
 {/if}
 
 {#if confirmLeave}
   <ConfirmDialog
+    title="Umalis sa listahan?"
     message="Aalis ka sa listahan. Hindi mo na makikita ang mga biyahe at item ng grupo."
-    onconfirm={handleLeave}
-    oncancel={() => { confirmLeave = false; }}
+    confirmLabel="Oo, umalis"
+    onConfirm={handleLeave}
+    onCancel={() => { confirmLeave = false; }}
   />
 {/if}
 

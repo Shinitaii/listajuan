@@ -17,7 +17,7 @@
 
   async function create() {
     if (!canCreate) return;
-    await createMarket(db, session.uid!, { name: newName.trim(), type: newType });
+    await createMarket(db, session.listId!, { name: newName.trim(), type: newType });
     newName = '';
     newType = 'palengke';
     creating = false;
@@ -36,7 +36,7 @@
 
   async function save(id: string) {
     if (!editName.trim()) return;
-    await updateMarket(db, session.uid!, id, { name: editName.trim(), type: editType });
+    await updateMarket(db, session.listId!, id, { name: editName.trim(), type: editType });
     editingId = null;
   }
 
@@ -45,7 +45,7 @@
 
   async function confirmDelete() {
     if (!deletingId) return;
-    await deleteMarket(db, session.uid!, deletingId);
+    await deleteMarket(db, session.listId!, deletingId);
     deletingId = null;
   }
 </script>

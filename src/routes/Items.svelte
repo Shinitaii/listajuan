@@ -26,7 +26,7 @@
 
   async function create() {
     if (!canCreate) return;
-    await createItem(db, session.uid!, {
+    await createItem(db, session.listId!, {
       canonicalName: newName.trim(),
       category: newCategory!,
       form: newForm!,
@@ -53,7 +53,7 @@
 
   async function save(id: string) {
     if (!editForm || !editCategory || !editName.trim()) return;
-    await updateItemMeta(db, session.uid!, id, {
+    await updateItemMeta(db, session.listId!, id, {
       canonicalName: editName.trim(),
       form: editForm,
       category: editCategory,
@@ -66,7 +66,7 @@
 
   async function confirmDelete() {
     if (!deletingId) return;
-    await deleteItem(db, session.uid!, deletingId);
+    await deleteItem(db, session.listId!, deletingId);
     deletingId = null;
   }
 </script>

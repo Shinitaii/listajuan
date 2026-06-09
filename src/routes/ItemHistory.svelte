@@ -7,13 +7,13 @@
   import type { Item } from '../lib/domain/types';
 
   let { params } = $props<{ params: { itemId: string } }>();
-  const uid = session.uid!;
+  const listId = session.listId!;
   let item = $state<Item | null>(null);
   let streams = $state<HistoryStream[]>([]);
 
   $effect(() => {
-    getItem(db, uid, params.itemId).then((i) => (item = i));
-    priceHistory(db, uid, params.itemId).then((h) => (streams = groupHistoryStreams(h)));
+    getItem(db, listId, params.itemId).then((i) => (item = i));
+    priceHistory(db, listId, params.itemId).then((h) => (streams = groupHistoryStreams(h)));
   });
 
   const peso = (n: number | null) => (n == null ? '—' : '₱' + Math.round(n).toLocaleString('en-PH'));

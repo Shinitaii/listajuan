@@ -8,7 +8,7 @@
   import { Chart, Svg, Bars } from 'layerchart';
   import { scaleBand, scaleLinear } from 'd3-scale';
 
-  const uid = session.uid!;
+  const listId = session.listId!;
   const now = new Date();
   const y = now.getFullYear(),
     m = now.getMonth() + 1;
@@ -20,9 +20,9 @@
   let byCat = $state<CategoryTotals>({});
 
   $effect(() => {
-    monthlyTotal(db, uid, y, m).then((v) => (thisMonth = v));
-    monthlyTotal(db, uid, prevY, prevM).then((v) => (lastMonth = v));
-    monthlyByCategory(db, uid, y, m).then((v) => (byCat = v));
+    monthlyTotal(db, listId, y, m).then((v) => (thisMonth = v));
+    monthlyTotal(db, listId, prevY, prevM).then((v) => (lastMonth = v));
+    monthlyByCategory(db, listId, y, m).then((v) => (byCat = v));
   });
 
   const delta = $derived(monthDelta(thisMonth, lastMonth));

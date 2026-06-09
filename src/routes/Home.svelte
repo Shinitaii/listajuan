@@ -23,9 +23,9 @@
 
   let thisMonth = $state(0), lastMonth = $state(0);
   $effect(() => {
-    const uid = session.uid; if (!uid) return;
-    monthlyTotal(db, uid, y, m).then((v) => (thisMonth = v));
-    monthlyTotal(db, uid, prevY, prevM).then((v) => (lastMonth = v));
+    const listId = session.listId; if (!listId) return;
+    monthlyTotal(db, listId, y, m).then((v) => (thisMonth = v));
+    monthlyTotal(db, listId, prevY, prevM).then((v) => (lastMonth = v));
   });
   const delta = $derived(monthDelta(thisMonth, lastMonth));
   const peso = (n: number) => '₱' + Math.round(n).toLocaleString('en-PH');
@@ -33,7 +33,7 @@
   async function newTrip() {
     const today = new Date().toISOString().slice(0, 10);
     const s = settings.value;
-    const trip = await createDraftTrip(db, session.uid!, {
+    const trip = await createDraftTrip(db, session.listId!, {
       name: 'Biyahe', date: today, defaultMarketId: s.defaultMarketId, defaultMarketName: s.defaultMarketName,
     });
     push(`/trip/${trip.id}`);

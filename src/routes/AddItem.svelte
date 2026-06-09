@@ -29,7 +29,7 @@
       onMarketChange?: (id: string | null, name: string | null) => void;
       onSave: (i: NewTripItemInput) => void;
     }>();
-  const uid = session.uid!;
+  const listId = session.listId!;
 
   let item = $state<Item | null>(null);
   // new-item creation
@@ -75,7 +75,7 @@
       priceTouched = true; // don't auto-prefill over the existing price
       // Edit mode needs the item only for its form/name. If the library item was
       // deleted, synthesize a fallback from the line itself so the editor never hangs.
-      getItem(db, uid, existing.itemId).then((i) => {
+      getItem(db, listId, existing.itemId).then((i) => {
         item = i ?? {
           id: existing!.itemId, canonicalName: existing!.label, nameLower: existing!.label.toLowerCase(),
           aliases: [], barcodes: [], category: existing!.category, form: formForUnit(existing!.unit),
@@ -99,10 +99,10 @@
     priceTouched = false; price = null;
     // A manual-resolved scan teaches the library: attach the code to the chosen item.
     if (pendingScanCode && !(r.barcodes ?? []).includes(pendingScanCode)) {
-      await attachBarcode(db, uid, r.id, pendingScanCode);
+      await attachBarcode(db, listId, r.id, pendingScanCode);
     }
     pendingScanCode = null;
-    const ctx = await lastContextFor(db, uid, r.id, marketId, variant || null);
+    const ctx = await lastContextFor(db, listId, r.id, marketId, variant || null);
     lastPpu = ctx?.pricePerBaseUnit ?? null; // the $effect seeds the estimate
   }
 
@@ -111,7 +111,7 @@
     const code = await scanBarcode();
     if (!code) return;
     const outcome = await resolveScannedCode(code, {
-      findItemByBarcode: (c) => findItemByBarcode(db, uid, c),
+      findItemByBarcode: (c) => findItemByBarcode(db, listId, c),
       lookupProductName: (c) => lookupProductName(c),
       isOnline: () => navigator.onLine,
     });
@@ -140,10 +140,10 @@
 
   async function confirmNewItem() {
     if (!newName.trim() || !newForm || !newCategory) return;
-    const created = await createItem(db, uid, {
+    const created = await createItem(db, listId, {
       canonicalName: newName.trim(), category: newCategory, form: newForm, defaultUnit: unitsFor(newForm)[0],
     });
-    if (pendingScanCode) { await attachBarcode(db, uid, created.id, pendingScanCode); pendingScanCode = null; }
+    if (pendingScanCode) { await attachBarcode(db, listId, created.id, pendingScanCode); pendingScanCode = null; }
     item = created; unit = created.defaultUnit; newName = '';
     lastPpu = null; priceTouched = false; price = null; // brand-new item: no history to prefill
   }

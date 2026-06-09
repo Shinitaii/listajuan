@@ -9,7 +9,7 @@
   let name = $state('');
   let type = $state<MarketType>('palengke');
   async function create() {
-    const m = await createMarket(db, session.uid!, { name: name.trim(), type });
+    const m = await createMarket(db, session.listId!, { name: name.trim(), type });
     creating = false; name = ''; onPick(m);
   }
 </script>

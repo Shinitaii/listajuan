@@ -252,3 +252,45 @@ describe('parseVoiceInput', () => {
     });
   });
 });
+
+describe('dialect synonym parsing — Bisaya', () => {
+  it('"usa" maps to piraso and extracts itemName', () => {
+    const result = parseVoiceInput('1 usa isda 50 piso');
+    expect(result.unit).toBe('piraso');
+    expect(result.itemName).toBe('isda');
+    expect(result.price).toBe(50);
+  });
+
+  it('"gatosan" maps to g with qty and itemName', () => {
+    const result = parseVoiceInput('100 gatosan luya 30 piso');
+    expect(result.unit).toBe('g');
+    expect(result.qty).toBe(100);
+    expect(result.itemName).toBe('luya');
+    expect(result.price).toBe(30);
+  });
+
+  it('"duha" maps to piraso', () => {
+    expect(parseVoiceInput('2 duha itlog').unit).toBe('piraso');
+  });
+});
+
+describe('dialect synonym parsing — Ilocano', () => {
+  it('"kilon" maps to kg with itemName and price', () => {
+    const result = parseVoiceInput('2 kilon baboy 200 piso');
+    expect(result.unit).toBe('kg');
+    expect(result.qty).toBe(2);
+    expect(result.itemName).toBe('baboy');
+    expect(result.price).toBe(200);
+  });
+
+  it('"maysa" maps to piraso and extracts itemName', () => {
+    const result = parseVoiceInput('1 maysa kamatis 20 piso');
+    expect(result.unit).toBe('piraso');
+    expect(result.itemName).toBe('kamatis');
+    expect(result.price).toBe(20);
+  });
+
+  it('"dua" maps to piraso', () => {
+    expect(parseVoiceInput('2 dua itlog').unit).toBe('piraso');
+  });
+});

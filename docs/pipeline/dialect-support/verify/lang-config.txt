@@ -1,0 +1,15 @@
+TSC: PASS (npx tsc --noEmit — no errors)
+
+npx vitest run src/lib/voice/lang.test.ts
+
+ RUN  v4.1.8 C:/Users/rgvil/coding-projects/listahan
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  00:17:20
+   Duration  1.74s
+
+GREEN — 10/10 tests passing
+- DIALECT_OPTIONS shape (5 tests)
+- getDialect default + read-back + throws safe (3 tests)
+- setDialect persist + throws safe (2 tests)

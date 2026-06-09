@@ -1,0 +1,27 @@
+npx tsc --noEmit — PASS (no errors)
+
+npm test (full suite including dialect-support.integration.test.ts)
+
+ RUN  v4.1.8 C:/Users/rgvil/coding-projects/listahan
+
+ Test Files  11 passed (11)
+      Tests  120 passed (120)
+   Start at  00:21:44
+   Duration  7.05s
+
+GREEN — 120/120
+
+Integration test coverage (src/lib/voice/dialect-support.integration.test.ts — 11 tests):
+- Dialect preference round-trip (3): getDialect default, setDialect en-PH, setDialect fil-PH
+- captureTranscript lang forwarding (3): default fil-PH, explicit en-PH, getDialect() flow-through
+- Bisaya unit synonyms end-to-end (2): gatosan→g, usa→piraso
+- Ilocano unit synonyms end-to-end (2): kilon→kg, maysa→piraso
+- Tagalog regression (1): "2 kilo repolyo 50 piso" unchanged
+
+UI wiring confirmed in AddItem.svelte:
+- voiceLang = $state(getDialect()) initialised at mount (line 42)
+- dialect <select> rendered inside {#if voiceAvailable} above mic button (lines 173–188)
+- onchange calls setDialect + updates voiceLang (line 180)
+- onVoice() passes voiceLang to captureTranscript(voiceLang) (line 128)
+- parseVoiceInput call unchanged (line 130)
+- .dialect-select min-height: 44px (line 241)

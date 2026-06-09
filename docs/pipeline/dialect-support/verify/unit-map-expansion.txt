@@ -1,0 +1,13 @@
+npx vitest run src/lib/voice/parse.test.ts src/lib/voice/capture.test.ts
+
+ RUN  v4.1.8 C:/Users/rgvil/coding-projects/listahan
+
+ Test Files  2 passed (2)
+      Tests  56 passed (56)
+   Start at  00:17:28
+   Duration  967ms
+
+GREEN — 56/56 tests passing
+- parse.test.ts: 40 existing Tagalog tests + 6 new dialect synonym tests (Bisaya + Ilocano) = 46
+- capture.test.ts: 8 existing tests + 2 new lang-param tests = 10
+- All existing tests unmodified and still passing

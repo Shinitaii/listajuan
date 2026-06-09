@@ -7,6 +7,7 @@
   import { isScanAvailable, scanBarcode } from '../lib/scan/capture';
   import { isVoiceAvailable, captureTranscript } from '../lib/voice/capture';
   import { parseVoiceInput } from '../lib/voice/parse';
+  import { getDialect, setDialect, DIALECT_OPTIONS } from '../lib/voice/lang';
   import { searchLibrary } from '../lib/state/library.svelte';
   import { ScanBarcode, Mic } from 'lucide-svelte';
   import { lastContextFor, type NewTripItemInput } from '../lib/data/trips';
@@ -38,6 +39,7 @@
   // barcode scan: availability (native only) + the code awaiting attachment to the chosen item
   let scanAvailable = $state(false);
   let voiceAvailable = $state(false);
+  let voiceLang = $state(getDialect());
   let pendingScanCode = $state<string | null>(null);
   isScanAvailable().then((v) => (scanAvailable = v));
   isVoiceAvailable().then((v) => (voiceAvailable = v));
@@ -123,7 +125,7 @@
   }
 
   async function onVoice() {
-    const transcript = await captureTranscript();
+    const transcript = await captureTranscript(voiceLang);
     if (!transcript) return;
     const result = parseVoiceInput(transcript, { searchLibrary });
     if (result.matchedItem) {
@@ -169,6 +171,19 @@
         <button class="scan" onclick={onScan}><ScanBarcode size={20} /> I-scan</button>
       {/if}
       {#if voiceAvailable}
+        <div class="dialect-row">
+          <label class="lbl" for="dialect-select">Wika</label>
+          <select
+            id="dialect-select"
+            class="dialect-select"
+            value={voiceLang}
+            onchange={(e) => { voiceLang = e.currentTarget.value; setDialect(voiceLang); }}
+          >
+            {#each DIALECT_OPTIONS as opt}
+              <option value={opt.lang}>{opt.label}</option>
+            {/each}
+          </select>
+        </div>
         <button class="scan" onclick={onVoice}><Mic size={20} /> Magsalita</button>
       {/if}
     </div>
@@ -222,4 +237,6 @@
   .scan { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px;
     border: 2px solid var(--c-accent); color: var(--c-accent); border-radius: var(--radius);
     padding: 10px; background: var(--c-bg); font-weight: 700; font-size: var(--fs-body); }
+  .dialect-row { display: flex; flex-direction: column; gap: 2px; }
+  .dialect-select { min-height: 44px; border: 2px solid var(--c-ink); border-radius: var(--radius); padding: 8px 12px; font-size: var(--fs-body); background: var(--c-bg); }
 </style>

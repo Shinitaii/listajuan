@@ -9,7 +9,7 @@ export const markets = {
   get all() { return _markets; },
 };
 
-export function startMarkets(uid: string) {
+export function startMarkets(listId: string) {
   if (unsub) return;
-  unsub = subscribeMarkets(db, uid, (m) => { _markets = m; });
+  unsub = subscribeMarkets(db, listId, (m) => { _markets = m; });
 }

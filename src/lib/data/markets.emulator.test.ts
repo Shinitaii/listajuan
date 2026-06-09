@@ -3,24 +3,26 @@ import { setupEmulator, teardownEmulator, clearFirestore, type TestCtx } from '.
 import { createMarket, getMarket, updateMarket, deleteMarket } from './markets';
 
 let ctx: TestCtx;
-beforeAll(async () => { ctx = await setupEmulator(); });
+let listId: string;
+
+beforeAll(async () => { ctx = await setupEmulator(); listId = ctx.uid; });
 afterAll(async () => { await teardownEmulator(ctx); });
 beforeEach(async () => { await clearFirestore(); });
 
 describe('createMarket', () => {
   it('creates a market with derived nameLower', async () => {
-    const m = await createMarket(ctx.db, ctx.uid, { name: 'Cartimar', type: 'palengke' });
+    const m = await createMarket(ctx.db, listId, { name: 'Cartimar', type: 'palengke' });
     expect(m.id).toBeTruthy();
     expect(m.nameLower).toBe('cartimar');
-    expect((await getMarket(ctx.db, ctx.uid, m.id))?.name).toBe('Cartimar');
+    expect((await getMarket(ctx.db, listId, m.id))?.name).toBe('Cartimar');
   });
 });
 
 describe('updateMarket', () => {
   it('renames and re-derives nameLower', async () => {
-    const m = await createMarket(ctx.db, ctx.uid, { name: 'Cartimar', type: 'palengke' });
-    await updateMarket(ctx.db, ctx.uid, m.id, { name: 'SM Hypermarket' });
-    const updated = await getMarket(ctx.db, ctx.uid, m.id);
+    const m = await createMarket(ctx.db, listId, { name: 'Cartimar', type: 'palengke' });
+    await updateMarket(ctx.db, listId, m.id, { name: 'SM Hypermarket' });
+    const updated = await getMarket(ctx.db, listId, m.id);
     expect(updated?.name).toBe('SM Hypermarket');
     expect(updated?.nameLower).toBe('sm hypermarket');
     expect(updated?.type).toBe('palengke');
@@ -29,8 +31,8 @@ describe('updateMarket', () => {
 
 describe('deleteMarket', () => {
   it('removes the market', async () => {
-    const m = await createMarket(ctx.db, ctx.uid, { name: 'Cartimar', type: 'palengke' });
-    await deleteMarket(ctx.db, ctx.uid, m.id);
-    expect(await getMarket(ctx.db, ctx.uid, m.id)).toBeNull();
+    const m = await createMarket(ctx.db, listId, { name: 'Cartimar', type: 'palengke' });
+    await deleteMarket(ctx.db, listId, m.id);
+    expect(await getMarket(ctx.db, listId, m.id)).toBeNull();
   });
 });

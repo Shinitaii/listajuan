@@ -10,8 +10,8 @@ export interface NewItemInput {
   aliases?: string[];
 }
 
-export async function createItem(db: Firestore, uid: string, input: NewItemInput): Promise<Item> {
-  const ref = doc(itemsCol(db, uid));
+export async function createItem(db: Firestore, listId: string, input: NewItemInput): Promise<Item> {
+  const ref = doc(itemsCol(db, listId));
   const item: Item = {
     id: ref.id,
     canonicalName: input.canonicalName,
@@ -34,19 +34,14 @@ export async function createItem(db: Firestore, uid: string, input: NewItemInput
   return item;
 }
 
-export async function getItem(db: Firestore, uid: string, itemId: string): Promise<Item | null> {
-  const snap = await getDoc(itemDoc(db, uid, itemId));
+export async function getItem(db: Firestore, listId: string, itemId: string): Promise<Item | null> {
+  const snap = await getDoc(itemDoc(db, listId, itemId));
   return snap.exists() ? (snap.data() as Item) : null;
 }
 
-/**
- * Recognition-over-recall search: matches name prefix or any alias prefix,
- * case-insensitive. Client-side filter over the (small, single-user) library —
- * appropriate for v1 scale and works fully offline against the local cache.
- */
-export async function searchItems(db: Firestore, uid: string, query: string): Promise<Item[]> {
+export async function searchItems(db: Firestore, listId: string, query: string): Promise<Item[]> {
   const q = query.trim().toLowerCase();
-  const snap = await getDocs(itemsCol(db, uid));
+  const snap = await getDocs(itemsCol(db, listId));
   const items = snap.docs.map((d) => d.data() as Item);
   if (!q) return items;
   return items.filter(
@@ -54,24 +49,18 @@ export async function searchItems(db: Firestore, uid: string, query: string): Pr
   );
 }
 
-/**
- * Library-first barcode lookup: returns the item carrying `code`, or null.
- * Client-side filter over the single-user library (offline against local cache),
- * mirroring `searchItems`. Tolerates older docs with no `barcodes` field.
- */
-export async function findItemByBarcode(db: Firestore, uid: string, code: string): Promise<Item | null> {
+export async function findItemByBarcode(db: Firestore, listId: string, code: string): Promise<Item | null> {
   const c = code.trim();
   if (!c) return null;
-  const snap = await getDocs(itemsCol(db, uid));
+  const snap = await getDocs(itemsCol(db, listId));
   const match = snap.docs.map((d) => d.data() as Item).find((it) => (it.barcodes ?? []).includes(c));
   return match ?? null;
 }
 
-/** Idempotently attach a barcode to an item so future scans match it locally. */
-export async function attachBarcode(db: Firestore, uid: string, itemId: string, code: string): Promise<void> {
+export async function attachBarcode(db: Firestore, listId: string, itemId: string, code: string): Promise<void> {
   const c = code.trim();
   if (!c) return;
-  const ref = itemDoc(db, uid, itemId);
+  const ref = itemDoc(db, listId, itemId);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error(`Item ${itemId} not found`);
   const item = snap.data() as Item;
@@ -81,10 +70,10 @@ export async function attachBarcode(db: Firestore, uid: string, itemId: string, 
 }
 
 export async function updateItemMeta(
-  db: Firestore, uid: string, itemId: string,
+  db: Firestore, listId: string, itemId: string,
   patch: { form?: Form; category?: Category; canonicalName?: string },
 ): Promise<void> {
-  const ref = itemDoc(db, uid, itemId);
+  const ref = itemDoc(db, listId, itemId);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error(`Item ${itemId} not found`);
   const next = { ...(snap.data() as Item), ...patch };
@@ -92,10 +81,10 @@ export async function updateItemMeta(
   await setDoc(ref, next);
 }
 
-export async function deleteItem(db: Firestore, uid: string, itemId: string): Promise<void> {
-  await deleteDoc(itemDoc(db, uid, itemId));
+export async function deleteItem(db: Firestore, listId: string, itemId: string): Promise<void> {
+  await deleteDoc(itemDoc(db, listId, itemId));
 }
 
-export function subscribeItems(db: Firestore, uid: string, cb: (items: Item[]) => void): () => void {
-  return onSnapshot(itemsCol(db, uid), (snap) => cb(snap.docs.map((d) => d.data() as Item)));
+export function subscribeItems(db: Firestore, listId: string, cb: (items: Item[]) => void): () => void {
+  return onSnapshot(itemsCol(db, listId), (snap) => cb(snap.docs.map((d) => d.data() as Item)));
 }

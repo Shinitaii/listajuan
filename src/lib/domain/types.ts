@@ -71,7 +71,31 @@ export interface TripItem {
   pricePerBaseUnit: number | null;
   category: Category;
   tripDate: string;
-  uid: string;
+  listId: string;
   addedAt: number;
   inCart?: boolean;
+}
+
+// --- Household collaboration types ---
+
+export type ListRole = 'owner' | 'member';
+
+export interface ListMemberInfo {
+  role: ListRole;
+  displayName: string | null;
+}
+
+export interface HouseholdList {
+  id: string;
+  name: string;
+  ownerId: string;
+  members: Record<string, ListMemberInfo>;
+  createdAt: number;
+}
+
+export interface ListInvite {
+  id: string;
+  listId: string;
+  createdBy: string;
+  expiresAt: number;
 }

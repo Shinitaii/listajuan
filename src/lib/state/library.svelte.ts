@@ -9,9 +9,9 @@ export const library = {
   get items() { return _items; },
 };
 
-export function startLibrary(uid: string) {
+export function startLibrary(listId: string) {
   if (unsub) return;
-  unsub = subscribeItems(db, uid, (items) => { _items = items; });
+  unsub = subscribeItems(db, listId, (items) => { _items = items; });
 }
 
 /** Recognition-over-recall search against the loaded library (offline-friendly). */

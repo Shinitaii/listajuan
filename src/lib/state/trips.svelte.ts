@@ -12,7 +12,7 @@ export const trips = {
   get drafts() { return _drafts; },
 };
 
-export function startTrips(uid: string) {
-  if (!unsubR) unsubR = subscribeRecentTrips(db, uid, (t) => { _recent = t; });
-  if (!unsubD) unsubD = subscribeDraftTrips(db, uid, (t) => { _drafts = t; });
+export function startTrips(listId: string) {
+  if (!unsubR) unsubR = subscribeRecentTrips(db, listId, (t) => { _recent = t; });
+  if (!unsubD) unsubD = subscribeDraftTrips(db, listId, (t) => { _drafts = t; });
 }

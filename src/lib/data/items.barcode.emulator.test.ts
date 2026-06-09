@@ -3,13 +3,14 @@ import { setupEmulator, teardownEmulator, clearFirestore, type TestCtx } from '.
 import { createItem, attachBarcode, findItemByBarcode, getItem } from './items';
 
 let ctx: TestCtx;
+let listId: string;
 
-beforeAll(async () => { ctx = await setupEmulator(); });
+beforeAll(async () => { ctx = await setupEmulator(); listId = ctx.uid; });
 afterAll(async () => { await teardownEmulator(ctx); });
 beforeEach(async () => { await clearFirestore(); });
 
 const newItem = () =>
-  createItem(ctx.db, ctx.uid, { canonicalName: 'Century Tuna', category: 'iba_pa', form: 'bilang', defaultUnit: 'piraso' });
+  createItem(ctx.db, listId, { canonicalName: 'Century Tuna', category: 'iba_pa', form: 'bilang', defaultUnit: 'piraso' });
 
 describe('createItem barcodes', () => {
   it('initializes barcodes to an empty array', async () => {
@@ -21,16 +22,16 @@ describe('createItem barcodes', () => {
 describe('attachBarcode', () => {
   it('adds a code to the item', async () => {
     const item = await newItem();
-    await attachBarcode(ctx.db, ctx.uid, item.id, '4800024847857');
-    const updated = await getItem(ctx.db, ctx.uid, item.id);
+    await attachBarcode(ctx.db, listId, item.id, '4800024847857');
+    const updated = await getItem(ctx.db, listId, item.id);
     expect(updated?.barcodes).toContain('4800024847857');
   });
 
   it('is idempotent — no duplicate codes', async () => {
     const item = await newItem();
-    await attachBarcode(ctx.db, ctx.uid, item.id, '123');
-    await attachBarcode(ctx.db, ctx.uid, item.id, '123');
-    const updated = await getItem(ctx.db, ctx.uid, item.id);
+    await attachBarcode(ctx.db, listId, item.id, '123');
+    await attachBarcode(ctx.db, listId, item.id, '123');
+    const updated = await getItem(ctx.db, listId, item.id);
     expect(updated?.barcodes.filter((c) => c === '123')).toHaveLength(1);
   });
 });
@@ -38,13 +39,13 @@ describe('attachBarcode', () => {
 describe('findItemByBarcode', () => {
   it('finds the item carrying the code', async () => {
     const item = await newItem();
-    await attachBarcode(ctx.db, ctx.uid, item.id, '4800024847857');
-    const found = await findItemByBarcode(ctx.db, ctx.uid, '4800024847857');
+    await attachBarcode(ctx.db, listId, item.id, '4800024847857');
+    const found = await findItemByBarcode(ctx.db, listId, '4800024847857');
     expect(found?.id).toBe(item.id);
   });
 
   it('returns null when no item carries the code', async () => {
     await newItem();
-    expect(await findItemByBarcode(ctx.db, ctx.uid, '0000000000000')).toBeNull();
+    expect(await findItemByBarcode(ctx.db, listId, '0000000000000')).toBeNull();
   });
 });
